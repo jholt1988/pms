@@ -1,7 +1,7 @@
 
     .DS_Store
     Thumbs.db
-    node_modules/
+    */node_modules/
     dist/
     .env
     .vscode/
@@ -9,5 +9,6 @@
     coverage/
     .idea/
     *.iml
-    ./tenant_portal_app/node_modules
-    ./tenant_portal_backend/node_modules
+    tenant_portal_app/node_modules
+    tenant_portal_backend/node_modules
+    tenant_portal/
