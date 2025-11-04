@@ -1,4 +1,3 @@
-
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
@@ -12,129 +11,244 @@ datasource db {
 }
 
 model User {
-  id             Int      @id @default(autoincrement())
-  username       String   @unique
-  password       String
-  role           Role     @default(TENANT)
-  failedLoginAttempts Int @default(0)
-  lockoutUntil   DateTime?
-  mfaEnabled     Boolean @default(false)
-  mfaSecret      String?
-  mfaTempSecret  String?
-  passwordUpdatedAt DateTime @default(now())
-  lastLoginAt    DateTime?
-  requests       MaintenanceRequest[]
-  lease          Lease?
-  payments       Payment[]
-  conversations  ConversationParticipant[]
-  sentMessages   Message[] @relation("sentMessages")
-  rentalApplications RentalApplication[]
-  expenses       Expense[] @relation("RecordedExpenses")
-  paymentMethods PaymentMethod[]
-  screenedApplications RentalApplication[] @relation("ScreenedApplications")
-  applicationNotes RentalApplicationNote[]
-  securityEvents SecurityEvent[]
+  id                        Int                         @id @default(autoincrement())
+  username                  String                      @unique
+  password                  String
+  role                      Role                        @default(TENANT)
+  failedLoginAttempts       Int                         @default(0)
+  lockoutUntil              DateTime?
+  mfaEnabled                Boolean                     @default(false)
+  mfaSecret                 String?
+  mfaTempSecret             String?
+  passwordUpdatedAt         DateTime                    @default(now())
+  lastLoginAt               DateTime?
+  requests                  MaintenanceRequest[]
+  lease                     Lease?
+  payments                  Payment[]
+  conversations             ConversationParticipant[]
+  sentMessages              Message[]                   @relation("sentMessages")
+  rentalApplications        RentalApplication[]
+  expenses                  Expense[]                   @relation("RecordedExpenses")
+  paymentMethods            PaymentMethod[]
+  screenedApplications      RentalApplication[]         @relation("ScreenedApplications")
+  applicationNotes          RentalApplicationNote[]
+  securityEvents            SecurityEvent[]
+  Technician                Technician[]
+  MaintenanceRequestHistory MaintenanceRequestHistory[]
+  MaintenanceNote           MaintenanceNote[]
+  MaintenancePhoto          MaintenancePhoto[]
 }
 
 model Property {
-  id      Int    @id @default(autoincrement())
-  name    String
-  address String
-  units   Unit[]
-  rentalApplications RentalApplication[]
-  expenses Expense[]
+  id                   Int                    @id @default(autoincrement())
+  name                 String
+  address              String
+  units                Unit[]
+  rentalApplications   RentalApplication[]
+  expenses             Expense[]
+  MaintenanceRequest   MaintenanceRequest[]
+  MaintenanceAsset     MaintenanceAsset[]
+  MaintenanceSlaPolicy MaintenanceSlaPolicy[]
 }
 
 model Unit {
-  id         Int      @id @default(autoincrement())
-  name       String // e.g., "Apt 101"
-  property   Property @relation(fields: [propertyId], references: [id])
-  propertyId Int
-  lease      Lease?
+  id                 Int                  @id @default(autoincrement())
+  name               String // e.g., "Apt 101"
+  property           Property             @relation(fields: [propertyId], references: [id])
+  propertyId         Int
+  lease              Lease?
   rentalApplications RentalApplication[]
-  expenses   Expense[]
+  expenses           Expense[]
+  MaintenanceRequest MaintenanceRequest[]
+  MaintenanceAsset   MaintenanceAsset[]
 }
 
 model Lease {
-  id          Int      @id @default(autoincrement())
-  startDate   DateTime
-  endDate     DateTime
-  rentAmount  Float
-  tenant      User     @relation(fields: [tenantId], references: [id])
-  tenantId    Int      @unique // A user can only have one lease
-  unit        Unit     @relation(fields: [unitId], references: [id])
-  unitId      Int      @unique // A unit can only have one lease
-  payments    Payment[]
-  invoices    Invoice[]
+  id                Int                       @id @default(autoincrement())
+  startDate         DateTime
+  endDate           DateTime
+  rentAmount        Float
+  tenant            User                      @relation(fields: [tenantId], references: [id])
+  tenantId          Int                       @unique // A user can only have one lease
+  unit              Unit                      @relation(fields: [unitId], references: [id])
+  unitId            Int                       @unique // A unit can only have one lease
+  payments          Payment[]
+  invoices          Invoice[]
   recurringSchedule RecurringInvoiceSchedule?
   autopayEnrollment AutopayEnrollment?
 }
 
 model MaintenanceRequest {
-  id          Int      @id @default(autoincrement())
-  title       String
-  description String
-  status      Status   @default(PENDING)
-  author      User     @relation(fields: [authorId], references: [id])
-  authorId    Int
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  priority    MaintenancePriority @default(MEDIUM)
-  dueAt       DateTime?
+  id             Int                         @id @default(autoincrement())
+  title          String
+  description    String
+  status         Status                      @default(PENDING)
+  author         User                        @relation(fields: [authorId], references: [id])
+  authorId       Int
+  createdAt      DateTime                    @default(now())
+  updatedAt      DateTime                    @updatedAt
+  priority       MaintenancePriority         @default(MEDIUM)
+  responseDueAt  DateTime?
+  dueAt          DateTime?
   acknowledgedAt DateTime?
-  completedAt DateTime?
-  property    Property? @relation(fields: [propertyId], references: [id])
-  propertyId  Int?
-  unit        Unit? @relation(fields: [unitId], references: [id])
-  unitId      Int?
-  asset       MaintenanceAsset? @relation(fields: [assetId], references: [id])
-  assetId     Int?
-  assignee    Technician? @relation(fields: [assigneeId], references: [id])
-  assigneeId  Int?
-  history     MaintenanceRequestHistory[]
-  notes       MaintenanceNote[]
-  photos      MaintenancePhoto[]
+  completedAt    DateTime?
+  property       Property?                   @relation(fields: [propertyId], references: [id])
+  propertyId     Int?
+  unit           Unit?                       @relation(fields: [unitId], references: [id])
+  unitId         Int?
+  asset          MaintenanceAsset?           @relation("AssetRequests", fields: [assetId], references: [id])
+  assetId        Int?
+  assignee       Technician?                 @relation("TechnicianAssignments", fields: [assigneeId], references: [id])
+  assigneeId     Int?
+  slaPolicy      MaintenanceSlaPolicy?       @relation(fields: [slaPolicyId], references: [id])
+  slaPolicyId    Int?
+  history        MaintenanceRequestHistory[]
+  notes          MaintenanceNote[]
+  photos         MaintenancePhoto[]
+}
+
+model MaintenanceAsset {
+  id                Int                      @id @default(autoincrement())
+  property          Property                 @relation(fields: [propertyId], references: [id])
+  propertyId        Int
+  unit              Unit?                    @relation(fields: [unitId], references: [id])
+  unitId            Int?
+  name              String
+  category          MaintenanceAssetCategory
+  manufacturer      String?
+  model             String?
+  serialNumber      String?
+  installDate       DateTime?
+  warrantyExpiresAt DateTime?
+  notes             String?
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+  requests          MaintenanceRequest[]     @relation("AssetRequests")
+
+  @@unique([propertyId, unitId, name], name: "MaintenanceAsset_property_unit_name_key")
+  @@index([propertyId])
+  @@index([unitId])
+}
+
+model Technician {
+  id          Int                         @id @default(autoincrement())
+  name        String
+  phone       String?
+  email       String?
+  role        TechnicianRole              @default(IN_HOUSE)
+  user        User?                       @relation(fields: [userId], references: [id])
+  userId      Int?
+  active      Boolean                     @default(true)
+  notes       String?
+  createdAt   DateTime                    @default(now())
+  updatedAt   DateTime                    @updatedAt
+  assignments MaintenanceRequest[]        @relation("TechnicianAssignments")
+  historyFrom MaintenanceRequestHistory[] @relation("HistoryFromAssignee")
+  historyTo   MaintenanceRequestHistory[] @relation("HistoryToAssignee")
+
+  @@index([userId])
+  @@index([role, active])
+}
+
+model MaintenanceSlaPolicy {
+  id                    Int                  @id @default(autoincrement())
+  name                  String?
+  priority              MaintenancePriority
+  responseTimeMinutes   Int?
+  resolutionTimeMinutes Int
+  property              Property?            @relation(fields: [propertyId], references: [id])
+  propertyId            Int?
+  active                Boolean              @default(true)
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+  requests              MaintenanceRequest[]
+
+  @@unique([propertyId, priority], name: "MaintenanceSlaPolicy_property_priority_key")
+  @@index([priority])
+}
+
+model MaintenanceRequestHistory {
+  id             Int                @id @default(autoincrement())
+  request        MaintenanceRequest @relation(fields: [requestId], references: [id])
+  requestId      Int
+  changedBy      User?              @relation(fields: [changedById], references: [id])
+  changedById    Int?
+  fromStatus     Status?
+  toStatus       Status?
+  fromAssignee   Technician?        @relation("HistoryFromAssignee", fields: [fromAssigneeId], references: [id])
+  fromAssigneeId Int?
+  toAssignee     Technician?        @relation("HistoryToAssignee", fields: [toAssigneeId], references: [id])
+  toAssigneeId   Int?
+  note           String?
+  createdAt      DateTime           @default(now())
+
+  @@index([requestId, createdAt])
+}
+
+model MaintenanceNote {
+  id        Int                @id @default(autoincrement())
+  request   MaintenanceRequest @relation(fields: [requestId], references: [id])
+  requestId Int
+  author    User               @relation(fields: [authorId], references: [id])
+  authorId  Int
+  body      String
+  createdAt DateTime           @default(now())
+
+  @@index([requestId, createdAt])
+}
+
+model MaintenancePhoto {
+  id           Int                @id @default(autoincrement())
+  request      MaintenanceRequest @relation(fields: [requestId], references: [id])
+  requestId    Int
+  uploadedBy   User?              @relation(fields: [uploadedById], references: [id])
+  uploadedById Int?
+  url          String
+  caption      String?
+  createdAt    DateTime           @default(now())
+
+  @@index([requestId])
 }
 
 model Invoice {
-  id        Int      @id @default(autoincrement())
+  id          Int                       @id @default(autoincrement())
   description String
-  amount    Float
-  dueDate   DateTime
-  status    String   @default("UNPAID") // UNPAID, PAID, OVERDUE
-  lease     Lease    @relation(fields: [leaseId], references: [id])
-  leaseId   Int
-  payments  Payment[]
-  issuedAt  DateTime @default(now())
-  externalId String? @unique
-  lateFees  LateFee[]
-  schedule   RecurringInvoiceSchedule? @relation(fields: [scheduleId], references: [id])
-  scheduleId Int?
+  amount      Float
+  dueDate     DateTime
+  status      String                    @default("UNPAID") // UNPAID, PAID, OVERDUE
+  lease       Lease                     @relation(fields: [leaseId], references: [id])
+  leaseId     Int
+  payments    Payment[]
+  issuedAt    DateTime                  @default(now())
+  externalId  String?                   @unique
+  lateFees    LateFee[]
+  schedule    RecurringInvoiceSchedule? @relation(fields: [scheduleId], references: [id])
+  scheduleId  Int?
 }
 
 model Payment {
-  id        Int      @id @default(autoincrement())
-  amount    Float
-  paymentDate      DateTime @default(now())
-  status    String // e.g., "COMPLETED", "FAILED"
-  invoice   Invoice?  @relation(fields: [invoiceId], references: [id])
-  invoiceId Int?
-  user      User     @relation(fields: [userId], references: [id])
-  userId    Int
-  lease     Lease?    @relation(fields: [leaseId], references: [id])
-  leaseId   Int?
-  externalId String? @unique
-  reconciledAt DateTime?
-  paymentMethod PaymentMethod? @relation(fields: [paymentMethodId], references: [id])
+  id              Int            @id @default(autoincrement())
+  amount          Float
+  paymentDate     DateTime       @default(now())
+  status          String // e.g., "COMPLETED", "FAILED"
+  invoice         Invoice?       @relation(fields: [invoiceId], references: [id])
+  invoiceId       Int?
+  user            User           @relation(fields: [userId], references: [id])
+  userId          Int
+  lease           Lease?         @relation(fields: [leaseId], references: [id])
+  leaseId         Int?
+  externalId      String?        @unique
+  reconciledAt    DateTime?
+  paymentMethod   PaymentMethod? @relation(fields: [paymentMethodId], references: [id])
   paymentMethodId Int?
 }
 
 model Conversation {
-  id           Int      @id @default(autoincrement())
+  id           Int                       @id @default(autoincrement())
   participants ConversationParticipant[]
   messages     Message[]
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt    DateTime                  @default(now())
+  updatedAt    DateTime                  @updatedAt
 }
 
 model ConversationParticipant {
@@ -147,68 +261,92 @@ model ConversationParticipant {
 }
 
 model Message {
-  id             Int      @id @default(autoincrement())
+  id             Int          @id @default(autoincrement())
   content        String
-  sender         User     @relation("sentMessages", fields: [senderId], references: [id])
+  sender         User         @relation("sentMessages", fields: [senderId], references: [id])
   senderId       Int
   conversation   Conversation @relation(fields: [conversationId], references: [id])
   conversationId Int
-  createdAt      DateTime @default(now())
+  createdAt      DateTime     @default(now())
 }
 
 model RentalApplication {
-  id                 Int                @id @default(autoincrement())
-  applicant          User?              @relation(fields: [applicantId], references: [id])
-  applicantId        Int?
-  property           Property           @relation(fields: [propertyId], references: [id])
-  propertyId         Int
-  unit               Unit               @relation(fields: [unitId], references: [id])
-  unitId             Int
-  status             ApplicationStatus  @default(PENDING)
-  applicationDate    DateTime           @default(now())
-  fullName           String
-  email              String
-  phoneNumber        String
-  income             Float
-  employmentStatus   String
-  previousAddress    String
-  creditScore        Int?
-  monthlyDebt        Float?
-  bankruptcyFiledYear Int?
+  id                    Int                     @id @default(autoincrement())
+  applicant             User?                   @relation(fields: [applicantId], references: [id])
+  applicantId           Int?
+  property              Property                @relation(fields: [propertyId], references: [id])
+  propertyId            Int
+  unit                  Unit                    @relation(fields: [unitId], references: [id])
+  unitId                Int
+  status                ApplicationStatus       @default(PENDING)
+  applicationDate       DateTime                @default(now())
+  fullName              String
+  email                 String
+  phoneNumber           String
+  income                Float
+  employmentStatus      String
+  previousAddress       String
+  creditScore           Int?
+  monthlyDebt           Float?
+  bankruptcyFiledYear   Int?
   rentalHistoryComments String?
-  qualificationStatus QualificationStatus? // Added for screening
-  recommendation     Recommendation?    // Added for screening
-  screeningDetails   String?            // Added for screening
-  screeningScore     Float?
-  screeningReasons   Json?
-  screenedAt         DateTime?
-  screenedBy         User?              @relation("ScreenedApplications", fields: [screenedById], references: [id])
-  screenedById       Int?
-  manualNotes        RentalApplicationNote[]
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
+  qualificationStatus   QualificationStatus? // Added for screening
+  recommendation        Recommendation? // Added for screening
+  screeningDetails      String? // Added for screening
+  screeningScore        Float?
+  screeningReasons      Json?
+  screenedAt            DateTime?
+  screenedBy            User?                   @relation("ScreenedApplications", fields: [screenedById], references: [id])
+  screenedById          Int?
+  manualNotes           RentalApplicationNote[]
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
 }
 
 model Expense {
-  id          Int            @id @default(autoincrement())
-  property    Property       @relation(fields: [propertyId], references: [id])
-  propertyId  Int
-  unit        Unit?          @relation(fields: [unitId], references: [id])
-  unitId      Int?
-  description String
-  amount      Float
-  date        DateTime
-  category    ExpenseCategory
-  recordedBy  User           @relation("RecordedExpenses", fields: [recordedById], references: [id])
+  id           Int             @id @default(autoincrement())
+  property     Property        @relation(fields: [propertyId], references: [id])
+  propertyId   Int
+  unit         Unit?           @relation(fields: [unitId], references: [id])
+  unitId       Int?
+  description  String
+  amount       Float
+  date         DateTime
+  category     ExpenseCategory
+  recordedBy   User            @relation("RecordedExpenses", fields: [recordedById], references: [id])
   recordedById Int
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
 }
 
 enum Status {
   PENDING
   IN_PROGRESS
   COMPLETED
+}
+
+enum MaintenancePriority {
+  EMERGENCY
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum MaintenanceAssetCategory {
+  HVAC
+  PLUMBING
+  ELECTRICAL
+  APPLIANCE
+  STRUCTURE
+  SAFETY
+  GROUNDS
+  OTHER
+}
+
+enum TechnicianRole {
+  IN_HOUSE
+  CONTRACTOR
+  VENDOR
 }
 
 enum Role {
@@ -233,13 +371,13 @@ enum Recommendation {
 }
 
 model RentalApplicationNote {
-  id          Int                @id @default(autoincrement())
-  application RentalApplication  @relation(fields: [applicationId], references: [id])
+  id            Int               @id @default(autoincrement())
+  application   RentalApplication @relation(fields: [applicationId], references: [id])
   applicationId Int
-  author      User?              @relation(fields: [authorId], references: [id])
-  authorId    Int?
-  body        String
-  createdAt   DateTime           @default(now())
+  author        User?             @relation(fields: [authorId], references: [id])
+  authorId      Int?
+  body          String
+  createdAt     DateTime          @default(now())
 
   @@index([applicationId])
 }
@@ -254,21 +392,21 @@ enum ExpenseCategory {
 }
 
 model PaymentMethod {
-  id           Int                 @id @default(autoincrement())
-  user         User                @relation(fields: [userId], references: [id])
-  userId       Int
-  type         PaymentMethodType
-  provider     PaymentProvider
-  providerCustomerId String?
+  id                      Int                 @id @default(autoincrement())
+  user                    User                @relation(fields: [userId], references: [id])
+  userId                  Int
+  type                    PaymentMethodType
+  provider                PaymentProvider
+  providerCustomerId      String?
   providerPaymentMethodId String?
-  last4        String?
-  brand        String?
-  expMonth     Int?
-  expYear      Int?
-  createdAt    DateTime            @default(now())
-  updatedAt    DateTime            @updatedAt
-  autopayEnrollments AutopayEnrollment[]
-  payments     Payment[]
+  last4                   String?
+  brand                   String?
+  expMonth                Int?
+  expYear                 Int?
+  createdAt               DateTime            @default(now())
+  updatedAt               DateTime            @updatedAt
+  autopayEnrollments      AutopayEnrollment[]
+  payments                Payment[]
 }
 
 enum PaymentMethodType {
@@ -283,21 +421,21 @@ enum PaymentProvider {
 }
 
 model RecurringInvoiceSchedule {
-  id           Int      @id @default(autoincrement())
-  lease        Lease    @relation(fields: [leaseId], references: [id])
-  leaseId      Int      @unique
-  amount       Float
-  description  String   @default("Monthly Rent")
-  frequency    BillingFrequency @default(MONTHLY)
-  dayOfMonth   Int?     // required for monthly
-  dayOfWeek    Int?     // optional for weekly
-  nextRun      DateTime
-  lateFeeAmount Float?  // flat fee
+  id               Int              @id @default(autoincrement())
+  lease            Lease            @relation(fields: [leaseId], references: [id])
+  leaseId          Int              @unique
+  amount           Float
+  description      String           @default("Monthly Rent")
+  frequency        BillingFrequency @default(MONTHLY)
+  dayOfMonth       Int? // required for monthly
+  dayOfWeek        Int? // optional for weekly
+  nextRun          DateTime
+  lateFeeAmount    Float? // flat fee
   lateFeeAfterDays Int? // number of days after due date
-  active       Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  invoices     Invoice[]
+  active           Boolean          @default(true)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  invoices         Invoice[]
 }
 
 enum BillingFrequency {
@@ -315,20 +453,20 @@ model LateFee {
 }
 
 model AutopayEnrollment {
-  id            Int             @id @default(autoincrement())
-  lease         Lease           @relation(fields: [leaseId], references: [id])
-  leaseId       Int             @unique
-  paymentMethod PaymentMethod   @relation(fields: [paymentMethodId], references: [id])
+  id              Int           @id @default(autoincrement())
+  lease           Lease         @relation(fields: [leaseId], references: [id])
+  leaseId         Int           @unique
+  paymentMethod   PaymentMethod @relation(fields: [paymentMethodId], references: [id])
   paymentMethodId Int
-  active        Boolean         @default(true)
-  maxAmount     Float?
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
+  active          Boolean       @default(true)
+  maxAmount       Float?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 }
 
 model SecurityEvent {
-  id        Int      @id @default(autoincrement())
-  user      User?    @relation(fields: [userId], references: [id])
+  id        Int               @id @default(autoincrement())
+  user      User?             @relation(fields: [userId], references: [id])
   userId    Int?
   username  String?
   type      SecurityEventType
@@ -336,7 +474,7 @@ model SecurityEvent {
   ipAddress String?
   userAgent String?
   metadata  Json?
-  createdAt DateTime @default(now())
+  createdAt DateTime          @default(now())
 
   @@index([createdAt])
   @@index([type])
@@ -357,8 +495,3 @@ enum SecurityEventType {
   APPLICATION_SCREENED
   APPLICATION_NOTE_CREATED
 }
-
-
-
-
-

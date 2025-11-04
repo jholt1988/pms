@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   MaintenanceAsset,
@@ -8,13 +8,25 @@ import {
   MaintenanceRequest,
   MaintenanceRequestHistory,
   MaintenanceSlaPolicy,
+  Prisma,
   Status,
-  Technician, TechnicianRole,
+  Technician,
+  TechnicianRole,
 } from '@prisma/client';
 import { CreateMaintenanceRequestDto } from './dto/create-maintenance-request.dto';
 import { UpdateMaintenanceStatusDto } from './dto/update-maintenance-status.dto';
 import { AssignTechnicianDto } from './dto/assign-technician.dto';
 import { AddMaintenanceNoteDto } from './dto/add-maintenance-note.dto';
+
+interface MaintenanceListFilters {
+  status?: Status;
+  priority?: MaintenancePriority;
+  propertyId?: number;
+  unitId?: number;
+  assigneeId?: number;
+  page?: number;
+  pageSize?: number;
+}
 
 @Injectable()
 export class MaintenanceService {
@@ -22,14 +34,19 @@ export class MaintenanceService {
 
   async create(userId: number, dto: CreateMaintenanceRequestDto): Promise<MaintenanceRequest> {
     const priority = dto.priority ?? MaintenancePriority.MEDIUM;
-    const dueAt = await this.computeDueDate(dto.propertyId ?? null, priority);
+    const { resolutionDueAt, responseDueAt, policyId } = await this.computeSlaTargets(
+      dto.propertyId ?? null,
+      priority,
+    );
 
     const request = await this.prisma.maintenanceRequest.create({
       data: {
         title: dto.title,
         description: dto.description,
         priority,
-        dueAt,
+        dueAt: resolutionDueAt,
+        responseDueAt,
+        slaPolicy: policyId ? { connect: { id: policyId } } : undefined,
         author: { connect: { id: userId } },
         property: dto.propertyId ? { connect: { id: dto.propertyId } } : undefined,
         unit: dto.unitId ? { connect: { id: dto.unitId } } : undefined,
@@ -55,14 +72,47 @@ export class MaintenanceService {
     });
   }
 
-  async findAll(): Promise<MaintenanceRequest[]> {
+  async findAll(filters: MaintenanceListFilters = {}): Promise<MaintenanceRequest[]> {
+    const {
+      status,
+      priority,
+      propertyId,
+      unitId,
+      assigneeId,
+      page = 1,
+      pageSize = 25,
+    } = filters;
+
+    const where: Prisma.MaintenanceRequestWhereInput = {};
+    if (status) {
+      where.status = status;
+    }
+    if (priority) {
+      where.priority = priority;
+    }
+    if (propertyId !== undefined) {
+      where.propertyId = propertyId;
+    }
+    if (unitId !== undefined) {
+      where.unitId = unitId;
+    }
+    if (assigneeId !== undefined) {
+      where.assigneeId = assigneeId;
+    }
+
+    const take = Math.min(Math.max(pageSize, 1), 100);
+    const skip = Math.max(page - 1, 0) * take;
+
     return this.prisma.maintenanceRequest.findMany({
+      where,
       include: this.defaultRequestInclude,
       orderBy: [
         { status: 'asc' },
         { priority: 'desc' },
         { dueAt: 'asc' },
       ],
+      skip,
+      take,
     });
   }
 
@@ -116,9 +166,21 @@ export class MaintenanceService {
   ): Promise<MaintenanceRequest> {
     const existing = await this.prisma.maintenanceRequest.findUnique({
       where: { id },
+      select: {
+        id: true,
+        status: true,
+        assigneeId: true,
+      },
     });
     if (!existing) {
       throw new NotFoundException('Maintenance request not found');
+    }
+
+    if (existing.assigneeId === dto.technicianId) {
+      return this.prisma.maintenanceRequest.findUniqueOrThrow({
+        where: { id },
+        include: this.defaultRequestInclude,
+      });
     }
 
     const updated = await this.prisma.maintenanceRequest.update({
@@ -132,7 +194,8 @@ export class MaintenanceService {
     await this.recordHistory(id, {
       changedById: actorId,
       fromAssignee: existing.assigneeId ?? undefined,
-      toAssignee: dto.technicianId,
+      fromStatus: existing.status,
+      toAssignee: updated.assigneeId ?? undefined,
       toStatus: updated.status,
       note: 'Technician assigned',
     });
@@ -158,27 +221,36 @@ export class MaintenanceService {
   }
 
   async listTechnicians(): Promise<Technician[]> {
-    return this.prisma.technician.findMany({ orderBy: { name: 'asc' } });
+    return this.prisma.technician.findMany({
+      where: { active: true },
+      orderBy: { name: 'asc' },
+    });
   }
 
   async createTechnician(data: { name: string; phone?: string; email?: string; userId?: number; role?: string }): Promise<Technician> {
+    const role = this.parseTechnicianRole(data.role);
     return this.prisma.technician.create({
       data: {
         name: data.name,
         phone: data.phone,
         email: data.email,
         user: data.userId ? { connect: { id: data.userId } } : undefined,
-        role: (data.role as TechnicianRole | undefined) ?? TechnicianRole.IN_HOUSE,
+        role,
       },
     });
   }
 
   async listAssets(propertyId?: number, unitId?: number): Promise<MaintenanceAsset[]> {
+    const where: Prisma.MaintenanceAssetWhereInput = {};
+    if (propertyId !== undefined) {
+      where.propertyId = propertyId;
+    }
+    if (unitId !== undefined) {
+      where.unitId = unitId;
+    }
+
     return this.prisma.maintenanceAsset.findMany({
-      where: {
-        propertyId,
-        unitId,
-      },
+      where,
       orderBy: { name: 'asc' },
     });
   }
@@ -191,59 +263,80 @@ export class MaintenanceService {
     manufacturer?: string;
     model?: string;
     serialNumber?: string;
-    installDate?: Date;
+    installDate?: Date | string;
   }): Promise<MaintenanceAsset> {
+    const category = this.parseAssetCategory(data.category);
+    const installDate = this.parseOptionalDate(data.installDate, 'installDate');
+
     return this.prisma.maintenanceAsset.create({
       data: {
         property: { connect: { id: data.propertyId } },
         unit: data.unitId ? { connect: { id: data.unitId } } : undefined,
         name: data.name,
-        category: data.category as MaintenanceAssetCategory,
+        category,
         manufacturer: data.manufacturer,
         model: data.model,
         serialNumber: data.serialNumber,
-        installDate: data.installDate,
+        installDate,
       },
     });
   }
 
   async getSlaPolicies(propertyId?: number): Promise<MaintenanceSlaPolicy[]> {
+    const where: Prisma.MaintenanceSlaPolicyWhereInput = {
+      active: true,
+    };
+    if (propertyId) {
+      where.OR = [{ propertyId }, { propertyId: null }];
+    } else {
+      where.propertyId = null;
+    }
+
     return this.prisma.maintenanceSlaPolicy.findMany({
-      where: {
-        OR: [{ propertyId: null }, { propertyId }],
-      },
+      where,
       orderBy: [{ propertyId: 'desc' }, { priority: 'asc' }],
     });
   }
 
-  private async computeDueDate(
+  private async computeSlaTargets(
     propertyId: number | null,
     priority: MaintenancePriority,
-  ): Promise<Date | null> {
+  ): Promise<{ resolutionDueAt: Date | null; responseDueAt: Date | null; policyId: number | null }> {
     const policies = await this.getSlaPolicies(propertyId ?? undefined);
     const policy = policies.find((p) => p.priority === priority);
     if (!policy) {
-      return null;
+      return { resolutionDueAt: null, responseDueAt: null, policyId: null };
     }
     const now = new Date();
-    return new Date(now.getTime() + policy.resolutionTimeMinutes * 60 * 1000);
+    const resolutionDueAt = new Date(now.getTime() + policy.resolutionTimeMinutes * 60 * 1000);
+    const responseDueAt = policy.responseTimeMinutes
+      ? new Date(now.getTime() + policy.responseTimeMinutes * 60 * 1000)
+      : null;
+    return { resolutionDueAt, responseDueAt, policyId: policy.id };
   }
 
-  private get defaultRequestInclude() {
-    return {
+  private get defaultRequestInclude(): Prisma.MaintenanceRequestInclude {
+    const include: Prisma.MaintenanceRequestInclude = {
       author: true,
       property: true,
       unit: true,
       asset: true,
       assignee: true,
+      slaPolicy: true,
       notes: {
         include: { author: true },
         orderBy: { createdAt: 'desc' },
       },
       history: {
+        include: {
+          changedBy: true,
+          fromAssignee: true,
+          toAssignee: true,
+        },
         orderBy: { createdAt: 'desc' },
       },
-    } satisfies Parameters<typeof this.prisma.maintenanceRequest.findMany>[0]['include'];
+    };
+    return include;
   }
 
   private async recordHistory(
@@ -263,11 +356,47 @@ export class MaintenanceService {
         changedBy: data.changedById ? { connect: { id: data.changedById } } : undefined,
         fromStatus: data.fromStatus,
         toStatus: data.toStatus,
-        fromAssignee: data.fromAssignee ?? null,
-        toAssignee: data.toAssignee ?? null,
+        fromAssignee: data.fromAssignee ? { connect: { id: data.fromAssignee } } : undefined,
+        toAssignee: data.toAssignee ? { connect: { id: data.toAssignee } } : undefined,
         note: data.note,
       },
     });
+  }
+
+  private parseTechnicianRole(role?: string): TechnicianRole {
+    if (!role) {
+      return TechnicianRole.IN_HOUSE;
+    }
+
+    const normalized = role.trim().toUpperCase().replace(/[\s-]+/g, '_');
+    if ((Object.values(TechnicianRole) as string[]).includes(normalized)) {
+      return normalized as TechnicianRole;
+    }
+
+    throw new BadRequestException(`Unsupported technician role: ${role}`);
+  }
+
+  private parseAssetCategory(category: string): MaintenanceAssetCategory {
+    if (!category) {
+      throw new BadRequestException('Asset category is required');
+    }
+    const normalized = category.trim().toUpperCase().replace(/[\s-]+/g, '_');
+    if ((Object.values(MaintenanceAssetCategory) as string[]).includes(normalized)) {
+      return normalized as MaintenanceAssetCategory;
+    }
+    throw new BadRequestException(`Unsupported asset category: ${category}`);
+  }
+
+  private parseOptionalDate(value: string | Date | undefined, field: string): Date | undefined {
+    if (!value) {
+      return undefined;
+    }
+
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      throw new BadRequestException(`Invalid ${field} supplied`);
+    }
+    return date;
   }
 }
 
