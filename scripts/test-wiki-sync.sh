@@ -48,7 +48,7 @@ echo ""
 echo "Test 4: Validating file content..."
 for file in "$WIKI_SOURCE_DIR"/*.md; do
     if [ ! -s "$file" ]; then
-        echo "❌ FAIL: File $(basename $file) is empty!"
+        echo "❌ FAIL: File $(basename "$file") is empty!"
         exit 1
     fi
 done

@@ -21,7 +21,7 @@ if [ ! -d "$WIKI_SOURCE_DIR" ]; then
 fi
 
 # Check if there are any markdown files in the source directory
-if ! ls $WIKI_SOURCE_DIR/*.md 1> /dev/null 2>&1; then
+if ! ls "$WIKI_SOURCE_DIR"/*.md 1> /dev/null 2>&1; then
     echo "Error: No markdown files found in '$WIKI_SOURCE_DIR'!"
     exit 1
 fi
@@ -37,7 +37,7 @@ echo "  ✓ Wiki repository cloned"
 echo ""
 
 echo "Step 2: Copying wiki files..."
-cp -v $WIKI_SOURCE_DIR/*.md "$WIKI_CLONE_DIR/"
+cp -v "$WIKI_SOURCE_DIR"/*.md "$WIKI_CLONE_DIR/"
 echo "  ✓ Files copied"
 echo ""
 
@@ -52,7 +52,7 @@ fi
 
 if [ -z "$(git config user.email)" ]; then
     echo "  Setting git user email..."
-    git config user.email "wiki-sync@example.com"
+    git config user.email "github-actions[bot]@users.noreply.github.com"
 fi
 
 # Add all changes
