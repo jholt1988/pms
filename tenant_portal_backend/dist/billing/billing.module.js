@@ -12,13 +12,14 @@ const billing_service_1 = require("./billing.service");
 const billing_controller_1 = require("./billing.controller");
 const payments_module_1 = require("../payments/payments.module");
 const prisma_module_1 = require("../prisma/prisma.module");
+const security_events_service_1 = require("../security-events/security-events.service");
 let BillingModule = class BillingModule {
 };
 exports.BillingModule = BillingModule;
 exports.BillingModule = BillingModule = __decorate([
     (0, common_1.Module)({
         imports: [payments_module_1.PaymentsModule, prisma_module_1.PrismaModule],
-        providers: [billing_service_1.BillingService],
+        providers: [billing_service_1.BillingService, security_events_service_1.SecurityEventsService],
         controllers: [billing_controller_1.BillingController],
         exports: [billing_service_1.BillingService],
     })

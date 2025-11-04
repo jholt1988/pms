@@ -37,6 +37,10 @@ model User {
   MaintenanceRequestHistory MaintenanceRequestHistory[]
   MaintenanceNote           MaintenanceNote[]
   MaintenancePhoto          MaintenancePhoto[]
+  LeaseHistory              LeaseHistory[]
+  LeaseDocument             LeaseDocument[]
+  LeaseRenewalOffer         LeaseRenewalOffer[]
+  LeaseNotice               LeaseNotice[]
 }
 
 model Property {
@@ -64,18 +68,46 @@ model Unit {
 }
 
 model Lease {
-  id                Int                       @id @default(autoincrement())
-  startDate         DateTime
-  endDate           DateTime
-  rentAmount        Float
-  tenant            User                      @relation(fields: [tenantId], references: [id])
-  tenantId          Int                       @unique // A user can only have one lease
-  unit              Unit                      @relation(fields: [unitId], references: [id])
-  unitId            Int                       @unique // A unit can only have one lease
-  payments          Payment[]
-  invoices          Invoice[]
-  recurringSchedule RecurringInvoiceSchedule?
-  autopayEnrollment AutopayEnrollment?
+  id                        Int                       @id @default(autoincrement())
+  startDate                 DateTime
+  endDate                   DateTime
+  rentAmount                Float
+  status                    LeaseStatus               @default(DRAFT)
+  noticePeriodDays          Int                       @default(30)
+  moveInAt                  DateTime?
+  moveOutAt                 DateTime?
+  autoRenew                 Boolean                   @default(false)
+  autoRenewLeadDays         Int?
+  depositAmount             Float                     @default(0)
+  depositHeldAt             DateTime?
+  depositReturnedAt         DateTime?
+  depositDisposition        DepositDisposition?
+  renewalOfferedAt          DateTime?
+  renewalDueAt              DateTime?
+  renewalAcceptedAt         DateTime?
+  terminationReason         String?
+  terminationRequestedBy    LeaseTerminationParty?
+  terminationEffectiveAt    DateTime?
+  rentEscalationPercent     Float?
+  rentEscalationEffectiveAt DateTime?
+  billingAlignment          BillingAlignment          @default(FULL_CYCLE)
+  currentBalance            Float                     @default(0)
+  tenant                    User                      @relation(fields: [tenantId], references: [id])
+  tenantId                  Int                       @unique // A user can only have one lease
+  unit                      Unit                      @relation(fields: [unitId], references: [id])
+  unitId                    Int                       @unique // A unit can only have one lease
+  payments                  Payment[]
+  invoices                  Invoice[]
+  recurringSchedule         RecurringInvoiceSchedule?
+  autopayEnrollment         AutopayEnrollment?
+  history                   LeaseHistory[]
+  documents                 LeaseDocument[]
+  renewalOffers             LeaseRenewalOffer[]
+  notices                   LeaseNotice[]
+  maintenanceRequests       MaintenanceRequest[]
+
+  @@index([status])
+  @@index([endDate])
 }
 
 model MaintenanceRequest {
@@ -102,6 +134,8 @@ model MaintenanceRequest {
   assigneeId     Int?
   slaPolicy      MaintenanceSlaPolicy?       @relation(fields: [slaPolicyId], references: [id])
   slaPolicyId    Int?
+  lease          Lease?                      @relation(fields: [leaseId], references: [id])
+  leaseId        Int?
   history        MaintenanceRequestHistory[]
   notes          MaintenanceNote[]
   photos         MaintenancePhoto[]
@@ -208,6 +242,73 @@ model MaintenancePhoto {
   createdAt    DateTime           @default(now())
 
   @@index([requestId])
+}
+
+model LeaseHistory {
+  id            Int          @id @default(autoincrement())
+  lease         Lease        @relation(fields: [leaseId], references: [id])
+  leaseId       Int
+  actor         User?        @relation(fields: [actorId], references: [id])
+  actorId       Int?
+  fromStatus    LeaseStatus?
+  toStatus      LeaseStatus?
+  note          String?
+  rentAmount    Float?
+  depositAmount Float?
+  metadata      Json?
+  createdAt     DateTime     @default(now())
+
+  @@index([leaseId, createdAt])
+}
+
+model LeaseDocument {
+  id           Int      @id @default(autoincrement())
+  lease        Lease    @relation(fields: [leaseId], references: [id])
+  leaseId      Int
+  type         String
+  url          String
+  description  String?
+  uploadedBy   User?    @relation(fields: [uploadedById], references: [id])
+  uploadedById Int?
+  createdAt    DateTime @default(now())
+
+  @@index([leaseId, createdAt])
+}
+
+model LeaseRenewalOffer {
+  id                Int                @id @default(autoincrement())
+  lease             Lease              @relation(fields: [leaseId], references: [id])
+  leaseId           Int
+  proposedRent      Float
+  proposedStart     DateTime
+  proposedEnd       DateTime
+  escalationPercent Float?
+  message           String?
+  status            LeaseRenewalStatus @default(OFFERED)
+  expiresAt         DateTime?
+  respondedAt       DateTime?
+  respondedBy       User?              @relation(fields: [respondedById], references: [id])
+  respondedById     Int?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  @@index([leaseId, status])
+  @@index([expiresAt])
+}
+
+model LeaseNotice {
+  id             Int                       @id @default(autoincrement())
+  lease          Lease                     @relation(fields: [leaseId], references: [id])
+  leaseId        Int
+  type           LeaseNoticeType
+  deliveryMethod LeaseNoticeDeliveryMethod
+  sentAt         DateTime                  @default(now())
+  acknowledgedAt DateTime?
+  message        String?
+  createdBy      User?                     @relation(fields: [createdById], references: [id])
+  createdById    Int?
+
+  @@index([leaseId, type])
 }
 
 model Invoice {
@@ -317,6 +418,58 @@ model Expense {
   recordedById Int
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
+}
+
+enum LeaseStatus {
+  DRAFT
+  PENDING_APPROVAL
+  ACTIVE
+  RENEWAL_PENDING
+  NOTICE_GIVEN
+  TERMINATING
+  TERMINATED
+  HOLDOVER
+  CLOSED
+}
+
+enum DepositDisposition {
+  HELD
+  PARTIAL_RETURN
+  RETURNED
+  FORFEITED
+}
+
+enum LeaseTerminationParty {
+  MANAGER
+  TENANT
+  SYSTEM
+}
+
+enum BillingAlignment {
+  FULL_CYCLE
+  PRORATE
+}
+
+enum LeaseRenewalStatus {
+  OFFERED
+  ACCEPTED
+  DECLINED
+  EXPIRED
+  WITHDRAWN
+}
+
+enum LeaseNoticeType {
+  MOVE_OUT
+  RENT_INCREASE
+  OTHER
+}
+
+enum LeaseNoticeDeliveryMethod {
+  EMAIL
+  SMS
+  PORTAL
+  PRINT
+  OTHER
 }
 
 enum Status {

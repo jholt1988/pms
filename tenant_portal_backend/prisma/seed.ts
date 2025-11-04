@@ -1,21 +1,29 @@
-import { MaintenanceAssetCategory, MaintenancePriority, TechnicianRole, PrismaClient } from '@prisma/client';
+import { LeaseStatus, MaintenanceAssetCategory, MaintenancePriority, TechnicianRole, PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
 async function ensureGlobalSla(priority: MaintenancePriority, resolution: number, response?: number) {
-  await prisma.maintenanceSlaPolicy.upsert({
+  const existing = await prisma.maintenanceSlaPolicy.findFirst({
     where: {
-      propertyId_priority: {
-        propertyId: null,
-        priority,
+      propertyId: null,
+      priority,
+    },
+  });
+
+  if (existing) {
+    await prisma.maintenanceSlaPolicy.update({
+      where: { id: existing.id },
+      data: {
+        resolutionTimeMinutes: resolution,
+        responseTimeMinutes: response ?? null,
+        active: true,
       },
-    },
-    update: {
-      resolutionTimeMinutes: resolution,
-      responseTimeMinutes: response ?? null,
-      active: true,
-    },
-    create: {
+    });
+    return existing;
+  }
+
+  return prisma.maintenanceSlaPolicy.create({
+    data: {
       name: `${priority.toLowerCase()} default`,
       priority,
       resolutionTimeMinutes: resolution,
@@ -103,7 +111,7 @@ async function ensureAsset(propertyId: number, unitId: number | null, name: stri
 }
 
 async function main() {
-  console.info('🌱 Seeding maintenance defaults...');
+  console.info('🌱 Seeding maintenance and lease defaults...');
 
   await ensureGlobalSla(MaintenancePriority.EMERGENCY, 240, 60);
   await ensureGlobalSla(MaintenancePriority.HIGH, 720, 240);
@@ -127,7 +135,31 @@ async function main() {
   await ensureAsset(property.id, unit?.id ?? null, 'Main Rooftop HVAC', MaintenanceAssetCategory.HVAC);
   await ensureAsset(property.id, null, 'Fire Pump Controller', MaintenanceAssetCategory.SAFETY);
 
+  const tenantUser = await prisma.user.findFirst({ where: { username: 'demo_tenant' } });
+  if (tenantUser && unit) {
+    await prisma.lease.upsert({
+      where: { tenantId: tenantUser.id },
+      update: {},
+      create: {
+        tenantId: tenantUser.id,
+        unitId: unit.id,
+        startDate: new Date(),
+        endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
+        moveInAt: new Date(),
+        rentAmount: 1800,
+        depositAmount: 500,
+        status: LeaseStatus.ACTIVE,
+        noticePeriodDays: 45,
+        autoRenew: true,
+        autoRenewLeadDays: 60,
+      },
+    });
+  }
+
   console.info('✅ Seed complete.');
+  if (tenantUser && unit) {
+    console.info(`   Lease ensured for ${tenantUser.username} in unit ${unit.name}.`);
+  }
   console.info('   Technicians:', technicians.map((t) => `${t.name} (${t.role})`).join(', '));
 }
 
@@ -139,3 +171,8 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
+
+
+
+
+

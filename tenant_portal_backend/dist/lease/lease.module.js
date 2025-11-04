@@ -10,12 +10,15 @@ exports.LeaseModule = void 0;
 const common_1 = require("@nestjs/common");
 const lease_controller_1 = require("./lease.controller");
 const lease_service_1 = require("./lease.service");
+const prisma_module_1 = require("../prisma/prisma.module");
+const lease_tasks_1 = require("./lease.tasks");
 let LeaseModule = class LeaseModule {
 };
 exports.LeaseModule = LeaseModule;
 exports.LeaseModule = LeaseModule = __decorate([
     (0, common_1.Module)({
+        imports: [prisma_module_1.PrismaModule],
         controllers: [lease_controller_1.LeaseController],
-        providers: [lease_service_1.LeaseService],
+        providers: [lease_service_1.LeaseService, lease_tasks_1.LeaseTasksService],
     })
 ], LeaseModule);

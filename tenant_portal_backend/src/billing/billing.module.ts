@@ -3,10 +3,10 @@ import { BillingService } from './billing.service';
 import { BillingController } from './billing.controller';
 import { PaymentsModule } from '../payments/payments.module';
 import { PrismaModule } from '../prisma/prisma.module';
-
+import { SecurityEventsService } from '../security-events/security-events.service';
 @Module({
   imports: [PaymentsModule, PrismaModule],
-  providers: [BillingService],
+  providers: [BillingService, SecurityEventsService],
   controllers: [BillingController],
   exports: [BillingService],
 })
