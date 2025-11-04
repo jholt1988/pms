@@ -1,0 +1,52 @@
+name: Sync Wiki
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'tenant_portal_app/docs/wiki/**'
+  workflow_dispatch:
+
+jobs:
+  sync-wiki:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Clone wiki repository
+        run: |
+          git clone https://github.com/${{ github.repository }}.wiki.git wiki-repo
+
+      - name: Sync wiki files
+        run: |
+          # Copy all markdown files from docs/wiki to wiki repo
+          cp -r tenant_portal_app/docs/wiki/*.md wiki-repo/
+          
+          # Navigate to wiki repo
+          cd wiki-repo
+          
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Add all changes
+          git add .
+          
+          # Check if there are changes to commit
+          if git diff --staged --quiet; then
+            echo "No changes to wiki"
+            exit 0
+          fi
+          
+          # Commit and push changes
+          git commit -m "Auto-sync wiki from tenant_portal_app/docs/wiki"
+          git push origin master
+
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -rf wiki-repo

@@ -12,3 +12,7 @@
     tenant_portal_app/node_modules
     tenant_portal_backend/node_modules
     tenant_portal/
+    
+    # Wiki sync temporary directories
+    wiki-repo-temp/
+    wiki-repo/
