@@ -1,19 +1,40 @@
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const SignupPage: React.FC = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [policy, setPolicy] = useState<{
+    minLength: number;
+    requireUppercase: boolean;
+    requireLowercase: boolean;
+    requireNumber: boolean;
+    requireSymbol: boolean;
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchPolicy = async () => {
+      try {
+        const res = await fetch('/api/auth/password-policy');
+        if (res.ok) {
+          setPolicy(await res.json());
+        }
+      } catch {
+        // ignore policy fetch errors
+      }
+    };
+    fetchPolicy();
+  }, []);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
     try {
-      const response = await fetch('http://localhost:3001/auth/register', {
+      const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -22,8 +43,18 @@ const SignupPage: React.FC = () => {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Signup failed');
+        let message = 'Signup failed';
+        try {
+          const errorData = await response.json();
+          if (Array.isArray(errorData?.errors)) {
+            message = errorData.errors.join(' ');
+          } else {
+            message = errorData.message || message;
+          }
+        } catch {
+          message = await response.text();
+        }
+        throw new Error(message || 'Signup failed');
       }
 
       navigate('/login');
@@ -62,6 +93,15 @@ const SignupPage: React.FC = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
+            {policy && (
+              <ul className="mt-2 list-disc list-inside text-xs text-gray-600 space-y-1">
+                <li>At least {policy.minLength} characters long</li>
+                {policy.requireUppercase && <li>Contains an uppercase letter</li>}
+                {policy.requireLowercase && <li>Contains a lowercase letter</li>}
+                {policy.requireNumber && <li>Contains a number</li>}
+                {policy.requireSymbol && <li>Contains a symbol</li>}
+              </ul>
+            )}
           </div>
           {error && <p className="text-red-500 text-xs italic mb-4">{error}</p>}
           <div className="flex items-center justify-between">

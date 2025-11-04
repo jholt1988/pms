@@ -11,25 +11,39 @@ import { useAuth } from './AuthContext';
 export default function LoginPage(): React.ReactElement {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [mfaCode, setMfaCode] = useState('');
+  const [mfaRequired, setMfaRequired] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { login } = useAuth();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setMfaRequired(false);
 
     try {
-      const response = await fetch('http://localhost:3001/auth/login', {
+      const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username, password, mfaCode: mfaCode || undefined }),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Login failed');
+        let message = 'Login failed';
+        try {
+          const errorData = await response.json();
+          message = errorData.message || message;
+        } catch {
+          message = await response.text();
+        }
+
+        if (message && message.toLowerCase().includes('mfa')) {
+          setMfaRequired(true);
+        }
+
+        throw new Error(message || 'Login failed');
       }
 
       const data = await response.json();
@@ -72,6 +86,24 @@ export default function LoginPage(): React.ReactElement {
               onChange={(e) => setPassword(e.target.value)}
             />
           </div>
+          {mfaRequired && (
+            <div className="mb-6">
+              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="mfa">
+                MFA Code
+              </label>
+              <input
+                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                id="mfa"
+                type="text"
+                placeholder="123456"
+                value={mfaCode}
+                onChange={(e) => setMfaCode(e.target.value)}
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Enter the 6-digit code from your authenticator app.
+              </p>
+            </div>
+          )}
           {error && <p className="text-red-500 text-xs italic mb-4">{error}</p>}
           <div className="flex items-center justify-between">
             <button
@@ -92,5 +124,3 @@ export default function LoginPage(): React.ReactElement {
     </div>
   );
 };
-
-

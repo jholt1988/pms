@@ -1,6 +1,6 @@
 
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma.service';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class LeaseService {
@@ -11,11 +11,16 @@ export class LeaseService {
   }
 
   async getAllLeases() {
-    return this.prisma.lease.findMany({ include: { tenant: true, unit: true } });
+    return this.prisma.lease.findMany({
+      include: { tenant: true, unit: { include: { property: true } } },
+    });
   }
 
   async getLeaseById(id: number) {
-    return this.prisma.lease.findUnique({ where: { id }, include: { tenant: true, unit: true } });
+    return this.prisma.lease.findUnique({
+      where: { id },
+      include: { tenant: true, unit: { include: { property: true } } },
+    });
   }
 
   async getLeaseByTenantId(tenantId: number) {

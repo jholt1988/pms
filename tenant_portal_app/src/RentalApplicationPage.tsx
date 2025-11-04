@@ -1,6 +1,5 @@
 
 import React, { useState, useEffect } from 'react';
-import { useAuth } from './AuthContext';
 
 /**
  * The rental application page.
@@ -15,21 +14,20 @@ const RentalApplicationPage = () => {
   const [email, setEmail] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [income, setIncome] = useState('');
+  const [creditScore, setCreditScore] = useState('');
+  const [monthlyDebt, setMonthlyDebt] = useState('');
+  const [bankruptcyFiledYear, setBankruptcyFiledYear] = useState('');
+  const [rentalHistoryComments, setRentalHistoryComments] = useState('');
   const [employmentStatus, setEmploymentStatus] = useState('');
   const [previousAddress, setPreviousAddress] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
-  const { token } = useAuth();
 
   useEffect(() => {
     const fetchProperties = async () => {
       try {
-        const res = await fetch('/api/properties', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
+        const res = await fetch('/api/properties/public');
         if (!res.ok) {
           throw new Error('Failed to fetch properties');
         }
@@ -42,10 +40,8 @@ const RentalApplicationPage = () => {
       }
     };
 
-    if (token) {
-      fetchProperties();
-    }
-  }, [token]);
+    fetchProperties();
+  }, []);
 
   useEffect(() => {
     if (selectedProperty) {
@@ -67,7 +63,6 @@ const RentalApplicationPage = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           propertyId: Number(selectedProperty),
@@ -78,6 +73,10 @@ const RentalApplicationPage = () => {
           income: parseFloat(income),
           employmentStatus,
           previousAddress,
+          creditScore: creditScore ? Number(creditScore) : undefined,
+          monthlyDebt: monthlyDebt ? Number(monthlyDebt) : undefined,
+          bankruptcyFiledYear: bankruptcyFiledYear ? Number(bankruptcyFiledYear) : undefined,
+          rentalHistoryComments: rentalHistoryComments || undefined,
         }),
       });
 
@@ -95,6 +94,10 @@ const RentalApplicationPage = () => {
       setIncome('');
       setEmploymentStatus('');
       setPreviousAddress('');
+      setCreditScore('');
+      setMonthlyDebt('');
+      setBankruptcyFiledYear('');
+      setRentalHistoryComments('');
     } catch (error: any) {
       setError(error.message);
     } finally {
@@ -200,6 +203,44 @@ const RentalApplicationPage = () => {
           />
         </div>
 
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div>
+            <label htmlFor="creditScore" className="block text-sm font-medium text-gray-700">Credit Score (optional)</label>
+            <input
+              type="number"
+              id="creditScore"
+              value={creditScore}
+              onChange={(e) => setCreditScore(e.target.value)}
+              min={300}
+              max={850}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+            />
+          </div>
+          <div>
+            <label htmlFor="monthlyDebt" className="block text-sm font-medium text-gray-700">Monthly Debt (optional)</label>
+            <input
+              type="number"
+              id="monthlyDebt"
+              value={monthlyDebt}
+              onChange={(e) => setMonthlyDebt(e.target.value)}
+              min={0}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+            />
+          </div>
+          <div>
+            <label htmlFor="bankruptcyFiledYear" className="block text-sm font-medium text-gray-700">Bankruptcy Year (optional)</label>
+            <input
+              type="number"
+              id="bankruptcyFiledYear"
+              value={bankruptcyFiledYear}
+              onChange={(e) => setBankruptcyFiledYear(e.target.value)}
+              min={1900}
+              max={new Date().getFullYear()}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+            />
+          </div>
+        </div>
+
         <div>
           <label htmlFor="employmentStatus" className="block text-sm font-medium text-gray-700">Employment Status</label>
           <input
@@ -222,6 +263,20 @@ const RentalApplicationPage = () => {
             className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
             required
           ></textarea>
+        </div>
+
+        <div>
+          <label htmlFor="rentalHistoryComments" className="block text-sm font-medium text-gray-700">
+            Rental History / References (optional)
+          </label>
+          <textarea
+            id="rentalHistoryComments"
+            value={rentalHistoryComments}
+            onChange={(e) => setRentalHistoryComments(e.target.value)}
+            rows={3}
+            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+            placeholder="Share prior landlord references or any additional context."
+          />
         </div>
 
         <button

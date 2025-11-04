@@ -1,6 +1,6 @@
 
-import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma.service';
+import { ForbiddenException, Injectable } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class MessagingService {
@@ -14,7 +14,7 @@ export class MessagingService {
   }
 
   async getConversationMessages(conversationId: number, userId: number) {
-    // Add validation to ensure the user is a participant of the conversation
+    await this.ensureConversationParticipant(conversationId, userId);
     return this.prisma.message.findMany({
       where: { conversationId },
       include: { sender: true },
@@ -33,7 +33,7 @@ export class MessagingService {
   }
 
   async sendMessage(senderId: number, conversationId: number, content: string) {
-    // Add validation to ensure the sender is a participant of the conversation
+    await this.ensureConversationParticipant(conversationId, senderId);
     return this.prisma.message.create({
       data: {
         senderId,
@@ -41,5 +41,20 @@ export class MessagingService {
         content,
       },
     });
+  }
+
+  private async ensureConversationParticipant(conversationId: number, userId: number) {
+    const conversation = await this.prisma.conversation.findFirst({
+      where: {
+        id: conversationId,
+        participants: {
+          some: { userId },
+        },
+      },
+    });
+
+    if (!conversation) {
+      throw new ForbiddenException('You do not have access to this conversation');
+    }
   }
 }

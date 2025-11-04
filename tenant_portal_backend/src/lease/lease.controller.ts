@@ -37,6 +37,7 @@ export class LeaseController {
   }
 
   @Get(':id')
+  @Roles(Role.PROPERTY_MANAGER)
   getLeaseById(@Param('id') id: string) {
     return this.leaseService.getLeaseById(Number(id));
   }
