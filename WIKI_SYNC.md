@@ -13,11 +13,28 @@ The workflow (`.github/workflows/sync-wiki.yml`) automatically:
 
 ## Manual Sync
 
-You can also manually trigger the wiki sync by:
+### Via GitHub Actions
+
+You can manually trigger the wiki sync via GitHub Actions by:
 
 1. Going to the Actions tab in GitHub
 2. Selecting the "Sync Wiki" workflow
 3. Clicking "Run workflow"
+
+### Via Local Script
+
+You can also run the sync manually from your local machine using the provided script:
+
+```bash
+./scripts/sync-wiki.sh
+```
+
+This script will:
+- Clone the wiki repository
+- Copy all markdown files from `tenant_portal_app/docs/wiki/`
+- Commit and push changes to the wiki
+
+**Note:** You need to have push access to the repository for the manual script to work.
 
 ## Adding or Updating Wiki Pages
 
