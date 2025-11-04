@@ -12,37 +12,44 @@ jobs:
   sync-wiki:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
 
-      - name: Set up Git user
+      - name: Check for wiki changes
+        id: check_changes
         run: |
-              git config --global user.name "github-actions[bot]"
-              git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "changes=true" >> $GITHUB_OUTPUT
+          else
+            # Check if there are actual changes in wiki directory
+            if git diff --name-only HEAD^ HEAD | grep -q "tenant_portal_app/docs/wiki/"; then
+              echo "changes=true" >> $GITHUB_OUTPUT
+            else
+              echo "changes=false" >> $GITHUB_OUTPUT
+            fi
+          fi
 
-      - name: Authenticate with GitHub
+      - name: Clone and sync wiki repository
+        if: steps.check_changes.outputs.changes == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-              git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
-
-# Your commit and push steps should come after this
-
-      - name: Clone wiki repository
-        run: |
-          git clone https://github.com/${{ github.repository }}.wiki.git wiki-repo
-
-      - name: Sync wiki files
-        run: |
+          # Configure git
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Clone wiki repository with authentication
+          git clone "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.wiki.git" wiki-repo
+          
           # Copy all markdown files from docs/wiki to wiki repo
           cp -r tenant_portal_app/docs/wiki/*.md wiki-repo/
           
           # Navigate to wiki repo
           cd wiki-repo
-          
-          # Configure git
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
           
           # Add all changes
           git add .
@@ -54,10 +61,9 @@ jobs:
           fi
           
           # Commit and push changes
-          git commit -m "Auto-sync wiki from tenant_portal_app/docs/wiki"
+          git commit -m "Auto-sync wiki from tenant_portal_app/docs/wiki [skip ci]"
           git push origin master
-
-      - name: Cleanup
-        if: always()
-        run: |
+          
+          # Cleanup
+          cd ..
           rm -rf wiki-repo
