@@ -1,5 +1,5 @@
 
-import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
@@ -10,8 +10,10 @@ import { LoginRequestDto } from './dto/login-request.dto';
 import { RegisterRequestDto } from './dto/register-request.dto';
 import { SecurityEventType } from '@prisma/client';
 import { authenticator } from 'otplib';
-import { addMinutes } from 'date-fns';
-
+import { addHours, addMinutes } from 'date-fns';
+import { PrismaService } from '../prisma/prisma.service';
+import { EmailService } from '../email/email.service';
+import { randomBytes } from 'crypto';
 @Injectable()
 export class AuthService {
   constructor(
@@ -20,6 +22,8 @@ export class AuthService {
     private readonly passwordPolicy: PasswordPolicyService,
     private readonly securityEvents: SecurityEventsService,
     private readonly configService: ConfigService,
+    private readonly prisma: PrismaService,
+    private readonly emailService: EmailService,
   ) {}
 
   private get maxFailedAttempts(): number {
@@ -142,11 +146,10 @@ export class AuthService {
     if (policyErrors.length) {
       throw new BadRequestException({ message: 'Password policy violation', errors: policyErrors });
     }
-    const salt = await bcrypt.genSalt();
-    const hashedPassword = await bcrypt.hash(dto.password, salt);
+    // Password hashing is now handled by UsersService
     const user = await this.usersService.create({
       username: dto.username,
-      password: hashedPassword,
+      password: dto.password,
       passwordUpdatedAt: new Date(),
     });
 
@@ -269,7 +272,96 @@ export class AuthService {
       userAgent: context.userAgent,
     });
   }
+
+  async forgotPassword(username: string, context: { ipAddress?: string; userAgent?: string }): Promise<void> {
+    const user = await this.usersService.findOne(username);
+    if (!user) {
+      // Don't reveal if user exists for security
+      return;
+    }
+
+    // Generate reset token
+    const token = randomBytes(32).toString('hex');
+    const expiresAt = addHours(new Date(), 24);
+
+    // Invalidate any existing tokens for this user
+    await this.prisma.PasswordResetToken.updateMany({
+      where: { userId: user.id, used: false },
+      data: { used: true },
+    });
+
+
+    // Create new token
+    await this.prisma.PasswordResetToken.create({
+      data: {
+        token,
+        userId: user.id,
+        expiresAt,
+      },
+    });
+
+    // Send email (using username as email for now - in production, add email field to User)
+    // Note: This assumes username is an email. In production, add separate email field.
+    try {
+      await this.emailService.sendPasswordResetEmail(user.username, token, '');
+    } catch (error) {
+      // Log error but don't fail the request
+      this.logger.error(`Failed to send password reset email: ${error}`);
+    }
+
+    await this.securityEvents.logEvent({
+      type: SecurityEventType.PASSWORD_CHANGED,
+      success: true,
+      userId: user.id,
+      username: user.username,
+      ipAddress: context.ipAddress,
+      userAgent: context.userAgent,
+      metadata: { source: 'FORGOT_PASSWORD_REQUEST' },
+    });
+  }
+
+  async resetPassword(token: string, newPassword: string, context: { ipAddress?: string; userAgent?: string }): Promise<void> {
+    if (!token || !newPassword) {
+      throw new BadRequestException('Token and new password are required');
+    }
+
+    // Find valid token, include the related user
+    const resetToken = await this.prisma.PasswordResetToken.findUnique({
+      where: { token },
+      include: { user: true },
+    });
+
+    if (!resetToken || resetToken.used || resetToken.expiresAt < new Date()) {
+      throw new UnauthorizedException('Invalid or expired reset token');
+    }
+
+    // Validate password policy
+    const policyErrors = this.passwordPolicy.validate(newPassword);
+    if (policyErrors.length) {
+      throw new BadRequestException({ message: 'Password policy violation', errors: policyErrors });
+    }
+
+    // Update password
+
+    // Mark token as used
+    
+    await this.prisma.PasswordResetToken.update({
+      where: { id: resetToken.id },
+      data: { used: true },
+    });
+
+    await this.usersService.update(resetToken.userId, { password: newPassword, passwordUpdatedAt: new Date() });
+
+    await this.securityEvents.logEvent({
+      type: SecurityEventType.PASSWORD_CHANGED,
+      success: true,
+      userId: resetToken.userId,
+      username: resetToken.user.username,
+      ipAddress: context.ipAddress,
+      userAgent: context.userAgent,
+      metadata: { source: 'PASSWORD_RESET' },
+    });
+  }
+
+  private readonly logger = new Logger(AuthService.name);
 }
-
-
-

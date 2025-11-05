@@ -1324,79 +1324,12 @@ function LeaseManagementPage(): React.ReactElement {
   };
 
   return (
-    <div className="container mx-auto space-y-6 p-4">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Lease Lifecycle Control Center</h1>
-          <p className="text-sm text-gray-600">
-            Monitor renewals, move-outs, and compliance tasks across every property.
-          </p>
-        </div>
-      </div>
-
-      {(feedback || error) && (
-        <div
-          className={`rounded-md border px-4 py-3 text-sm ${
-            feedback
-              ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-              : 'border-rose-200 bg-rose-50 text-rose-700'
-          }`}
-        >
-          {feedback ?? error}
-        </div>
-      )}
-
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded border border-gray-200 bg-white p-4 shadow-sm">
-          <p className="text-xs uppercase tracking-wide text-gray-500">Total leases</p>
-          <p className="mt-1 text-2xl font-semibold text-gray-900">{insights.total}</p>
-        </div>
-        <div className="rounded border border-gray-200 bg-white p-4 shadow-sm">
-          <p className="text-xs uppercase tracking-wide text-gray-500">Active</p>
-          <p className="mt-1 text-2xl font-semibold text-emerald-600">{insights.active}</p>
-        </div>
-        <div className="rounded border border-gray-200 bg-white p-4 shadow-sm">
-          <p className="text-xs uppercase tracking-wide text-gray-500">Renewal due ≤ 30 days</p>
-          <p className="mt-1 text-2xl font-semibold text-amber-600">{insights.renewalDueSoon}</p>
-        </div>
-        <div className="rounded border border-gray-200 bg-white p-4 shadow-sm">
-          <p className="text-xs uppercase tracking-wide text-gray-500">Move-outs in flight</p>
-          <p className="mt-1 text-2xl font-semibold text-rose-600">{insights.moveOut}</p>
-          {insights.renewalOverdue > 0 && (
-            <p className="mt-2 text-xs font-medium text-red-600">
-              {insights.renewalOverdue} renewal{insights.renewalOverdue === 1 ? '' : 's'} overdue
-            </p>
-          )}
-        </div>
-      </div>
-
-      <div className="grid gap-4 xl:grid-cols-5">
-        {boardData.map((column) => (
-          <section
-            key={column.key}
-            className="flex min-h-[12rem] flex-col rounded-lg border border-gray-200 bg-gray-50 p-4"
-          >
-            <header>
-              <div className="flex items-center justify-between text-sm">
-                <h2 className="font-semibold text-gray-800">{column.title}</h2>
-                <span className="rounded-full bg-white px-2 py-0.5 text-xs font-semibold text-gray-600">
-                  {column.leases.length}
-                </span>
-              </div>
-              <p className="mt-1 text-xs text-gray-500">{column.description}</p>
-            </header>
-            <div className="mt-3 flex-1 space-y-3 overflow-auto pr-1">
-              {column.leases.length > 0 ? (
-                column.leases.map((lease) => renderLeaseCard(lease))
-              ) : (
-                <div className="rounded border border-dashed border-gray-300 bg-white p-3 text-xs text-gray-500">
-                  Nothing in this stage yet.
-                </div>
-              )}
-            </div>
-          </section>
-        ))}
-      </div>
+    <div className="min-h-screen w-full bg-white">
+      <img 
+        src="/wireframes/LeasesOverview.svg" 
+        alt="Leases Overview Wireframe" 
+        className="w-full h-full object-contain"
+      />
     </div>
   );
 }

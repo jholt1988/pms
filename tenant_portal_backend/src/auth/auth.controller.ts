@@ -5,6 +5,10 @@ import { LoginRequestDto } from './dto/login-request.dto';
 import { RegisterRequestDto } from './dto/register-request.dto';
 import { MfaActivateDto, MfaDisableDto } from './dto/mfa.dto';
 import { Request } from 'express';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+
+
 
 @Controller('auth')
 export class AuthController {
@@ -78,5 +82,23 @@ export class AuthController {
       return forwarded[0];
     }
     return req.ip;
-  }
+    }
+    
+@Post('forgot-password')
+async forgotPassword(@Body() dto: ForgotPasswordDto, @Req() req: Request) {
+  await this.authService.forgotPassword(dto.username, {
+    ipAddress: this.getRequestIp(req),
+    userAgent: req.headers['user-agent'] ?? undefined,
+  });
+  return { message: 'If a matching account was found, a password reset email has been sent.' };
+}
+
+@Post('reset-password')
+async resetPassword(@Body() dto: ResetPasswordDto, @Req() req: Request) {
+  await this.authService.resetPassword(dto.token, dto.newPassword, {
+    ipAddress: this.getRequestIp(req),
+    userAgent: req.headers['user-agent'] ?? undefined,
+  });
+  return { message: 'Password has been reset successfully.' };
+}
 }

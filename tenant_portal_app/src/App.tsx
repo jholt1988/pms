@@ -3,6 +3,8 @@ import { BrowserRouter, Routes, Route, Navigate, Link, Outlet } from 'react-rout
 import { useAuth } from './AuthContext';
 import LoginPage from './LoginPage';
 import SignupPage from './SignupPage';
+import ForgotPasswordPage from './ForgotPasswordPage';
+import PasswordResetPage from './PasswordResetPage';
 import MaintenanceDashboard from './MaintenanceDashboard';
 import PaymentsPage from './PaymentsPage';
 import MessagingPage from './MessagingPage';
@@ -13,6 +15,14 @@ import RentalApplicationsManagementPage from './RentalApplicationsManagementPage
 import ExpenseTrackerPage from './ExpenseTrackerPage';
 import RentEstimatorPage from './RentEstimatorPage';
 import AuditLogPage from './AuditLogPage';
+import DocumentManagementPage from './DocumentManagementPage';
+import ReportingPage from './ReportingPage';
+import UserManagementPage from './UserManagementPage';
+import NotificationCenter from './NotificationCenter';
+import TenantShell from './TenantShell';
+import StaffShell from './StaffShell';
+import TenantInspectionPage from './TenantInspectionPage';
+import InspectionManagementPage from './InspectionManagementPage';
 
 const RequireAuth = () => {
   const { token } = useAuth();
@@ -31,65 +41,14 @@ const RequireRole = ({ allowedRoles }: { allowedRoles: Array<string> }) => {
   return allowedRoles.includes(user.role) ? <Outlet /> : <Navigate to="/" replace />;
 };
 
-const AppLayout = () => {
-  const { user, logout } = useAuth();
-
-  return (
-    <div>
-      <header
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          padding: '1rem',
-          background: '#f0f0f0',
-        }}
-      >
-        <h1>Property Management Suite</h1>
-        <nav>
-          <Link to="/" style={{ marginRight: '1rem' }}>
-            Maintenance
-          </Link>
-          <Link to="/payments" style={{ marginRight: '1rem' }}>
-            Payments
-          </Link>
-          <Link to="/messaging" style={{ marginRight: '1rem' }}>
-            Messaging
-          </Link>
-          {user?.role === 'PROPERTY_MANAGER' && (
-            <>
-              <Link to="/lease-management" style={{ marginRight: '1rem' }}>
-                Lease Management
-              </Link>
-              <Link to="/rental-applications-management" style={{ marginRight: '1rem' }}>
-                Applications
-              </Link>
-              <Link to="/expense-tracker" style={{ marginRight: '1rem' }}>
-                Expense Tracker
-              </Link>
-              <Link to="/rent-estimator" style={{ marginRight: '1rem' }}>
-                Rent Estimator
-              </Link>
-              <Link to="/security-events" style={{ marginRight: '1rem' }}>
-                Audit Log
-              </Link>
-            </>
-          )}
-          {user?.role === 'TENANT' && (
-            <Link to="/my-lease" style={{ marginRight: '1rem' }}>
-              My Lease
-            </Link>
-          )}
-        </nav>
-        <button onClick={logout} style={{ padding: '0.5rem 1rem' }}>
-          Logout
-        </button>
-      </header>
-      <main>
-        <Outlet />
-      </main>
-    </div>
-  );
+const RoleBasedShell = () => {
+  const { user } = useAuth();
+  
+  if (user?.role === 'PROPERTY_MANAGER') {
+    return <StaffShell />;
+  }
+  
+  return <TenantShell />;
 };
 
 export default function App(): React.ReactElement {
@@ -100,10 +59,12 @@ export default function App(): React.ReactElement {
       <Routes>
         <Route path="/login" element={!token ? <LoginPage /> : <Navigate to="/" replace />} />
         <Route path="/signup" element={!token ? <SignupPage /> : <Navigate to="/" replace />} />
+        <Route path="/forgot-password" element={!token ? <ForgotPasswordPage /> : <Navigate to="/" replace />} />
+        <Route path="/reset-password" element={!token ? <PasswordResetPage /> : <Navigate to="/" replace />} />
         <Route path="/rental-application" element={<RentalApplicationPage />} />
 
         <Route element={<RequireAuth />}>
-          <Route element={<AppLayout />}>
+          <Route element={<RoleBasedShell />}>
             <Route index element={<MaintenanceDashboard />} />
             <Route path="payments" element={<PaymentsPage />} />
             <Route path="messaging" element={<MessagingPage />} />
@@ -114,10 +75,15 @@ export default function App(): React.ReactElement {
               <Route path="expense-tracker" element={<ExpenseTrackerPage />} />
               <Route path="rent-estimator" element={<RentEstimatorPage />} />
               <Route path="security-events" element={<AuditLogPage />} />
+              <Route path="user-management" element={<UserManagementPage />} />
+              <Route path="documents" element={<DocumentManagementPage />} />
+              <Route path="reporting" element={<ReportingPage />} />
+              <Route path="inspection-management" element={<InspectionManagementPage />} />
             </Route>
 
             <Route element={<RequireRole allowedRoles={['TENANT']} />}>
               <Route path="my-lease" element={<MyLeasePage />} />
+              <Route path="inspections" element={<TenantInspectionPage />} />
             </Route>
 
             <Route path="*" element={<Navigate to="/" replace />} />

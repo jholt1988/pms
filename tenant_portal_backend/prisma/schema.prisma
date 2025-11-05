@@ -41,6 +41,13 @@ model User {
   LeaseDocument             LeaseDocument[]
   LeaseRenewalOffer         LeaseRenewalOffer[]
   LeaseNotice               LeaseNotice[]
+  passwordResetTokens       PasswordResetToken[]
+  notifications             Notification[]
+  documents                 Document[]
+  sharedDocuments           Document[]                  @relation("DocumentShares")
+  inspections               UnitInspection[]            @relation("Inspector")
+  createdInspections        UnitInspection[]            @relation("CreatedBy")
+  UnitInspectionPhoto       UnitInspectionPhoto[]
 }
 
 model Property {
@@ -53,6 +60,8 @@ model Property {
   MaintenanceRequest   MaintenanceRequest[]
   MaintenanceAsset     MaintenanceAsset[]
   MaintenanceSlaPolicy MaintenanceSlaPolicy[]
+  Document             Document[]
+  UnitInspection       UnitInspection[]
 }
 
 model Unit {
@@ -65,6 +74,7 @@ model Unit {
   expenses           Expense[]
   MaintenanceRequest MaintenanceRequest[]
   MaintenanceAsset   MaintenanceAsset[]
+  inspections        UnitInspection[]
 }
 
 model Lease {
@@ -102,6 +112,7 @@ model Lease {
   autopayEnrollment         AutopayEnrollment?
   history                   LeaseHistory[]
   documents                 LeaseDocument[]
+  generalDocuments          Document[]
   renewalOffers             LeaseRenewalOffer[]
   notices                   LeaseNotice[]
   maintenanceRequests       MaintenanceRequest[]
@@ -273,6 +284,39 @@ model LeaseDocument {
   createdAt    DateTime @default(now())
 
   @@index([leaseId, createdAt])
+}
+
+model Document {
+  id           Int              @id @default(autoincrement())
+  fileName     String
+  filePath     String
+  category     DocumentCategory
+  description  String?
+  mimeType     String?
+  size         Int?
+  uploadedBy   User             @relation(fields: [uploadedById], references: [id])
+  uploadedById Int
+  lease        Lease?           @relation(fields: [leaseId], references: [id])
+  leaseId      Int?
+  property     Property?        @relation(fields: [propertyId], references: [id])
+  propertyId   Int?
+  sharedWith   User[]           @relation("DocumentShares")
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@index([uploadedById])
+  @@index([leaseId])
+  @@index([propertyId])
+  @@index([category])
+}
+
+enum DocumentCategory {
+  LEASE
+  NOTICE
+  INVOICE
+  MAINTENANCE
+  APPLICATION
+  OTHER
 }
 
 model LeaseRenewalOffer {
@@ -633,6 +677,20 @@ model SecurityEvent {
   @@index([type])
 }
 
+model PasswordResetToken {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    Int
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([token])
+  @@index([userId])
+  @@index([expiresAt])
+}
+
 enum SecurityEventType {
   LOGIN_SUCCESS
   LOGIN_FAILURE
@@ -647,4 +705,91 @@ enum SecurityEventType {
   RECURRING_BILLING_UPDATED
   APPLICATION_SCREENED
   APPLICATION_NOTE_CREATED
+}
+
+model Notification {
+  id        Int              @id @default(autoincrement())
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    Int
+  type      NotificationType
+  title     String
+  message   String
+  read      Boolean          @default(false)
+  readAt    DateTime?
+  metadata  Json?
+  createdAt DateTime         @default(now())
+
+  @@index([userId, read])
+  @@index([userId, createdAt])
+  @@index([type])
+}
+
+enum NotificationType {
+  RENT_REMINDER
+  RENT_OVERDUE
+  LEASE_RENEWAL
+  MAINTENANCE_SLA_BREACH
+  MAINTENANCE_COMPLETED
+  NEW_MESSAGE
+  LEASE_NOTICE
+  PAYMENT_RECEIVED
+  APPLICATION_STATUS_CHANGE
+  SYSTEM_ANNOUNCEMENT
+  INSPECTION_SCHEDULED
+  INSPECTION_COMPLETED
+}
+
+model UnitInspection {
+  id            Int                   @id @default(autoincrement())
+  unit          Unit                  @relation(fields: [unitId], references: [id])
+  unitId        Int
+  property      Property              @relation(fields: [propertyId], references: [id])
+  propertyId    Int
+  type          InspectionType
+  status        InspectionStatus      @default(SCHEDULED)
+  scheduledDate DateTime
+  completedDate DateTime?
+  inspector     User?                 @relation("Inspector", fields: [inspectorId], references: [id])
+  inspectorId   Int?
+  createdBy     User                  @relation("CreatedBy", fields: [createdById], references: [id])
+  createdById   Int
+  notes         String?
+  findings      Json?
+  photos        UnitInspectionPhoto[]
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+
+  @@index([unitId])
+  @@index([propertyId])
+  @@index([status])
+  @@index([scheduledDate])
+  @@index([inspectorId])
+}
+
+model UnitInspectionPhoto {
+  id           Int            @id @default(autoincrement())
+  inspection   UnitInspection @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+  inspectionId Int
+  url          String
+  caption      String?
+  uploadedBy   User?          @relation(fields: [uploadedById], references: [id])
+  uploadedById Int?
+  createdAt    DateTime       @default(now())
+
+  @@index([inspectionId])
+}
+
+enum InspectionType {
+  MOVE_IN
+  MOVE_OUT
+  ROUTINE
+  DAMAGE
+  COMPLIANCE
+}
+
+enum InspectionStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
 }

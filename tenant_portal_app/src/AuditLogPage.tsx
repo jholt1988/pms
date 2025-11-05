@@ -52,49 +52,12 @@ export default function AuditLogPage(): React.ReactElement {
   }
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Security Audit Log</h1>
-      {error && <div className="mb-3 rounded bg-red-100 px-4 py-2 text-red-700">{error}</div>}
-      <div className="overflow-x-auto">
-        <table className="min-w-full bg-white">
-          <thead>
-            <tr>
-              <th className="border-b px-4 py-2 text-left">Timestamp</th>
-              <th className="border-b px-4 py-2 text-left">Event</th>
-              <th className="border-b px-4 py-2 text-left">User</th>
-              <th className="border-b px-4 py-2 text-left">Success</th>
-              <th className="border-b px-4 py-2 text-left">IP</th>
-              <th className="border-b px-4 py-2 text-left">Details</th>
-            </tr>
-          </thead>
-          <tbody>
-            {events.map((event) => (
-              <tr key={event.id}>
-                <td className="border-b px-4 py-2">
-                  {new Date(event.createdAt).toLocaleString()}
-                </td>
-                <td className="border-b px-4 py-2 font-mono text-sm">{event.type}</td>
-                <td className="border-b px-4 py-2">{event.username ?? '—'}</td>
-                <td className="border-b px-4 py-2">
-                  <span
-                    className={`rounded px-2 py-1 text-xs font-semibold ${
-                      event.success ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                    }`}
-                  >
-                    {event.success ? 'Success' : 'Failure'}
-                  </span>
-                </td>
-                <td className="border-b px-4 py-2 text-sm">{event.ipAddress ?? '—'}</td>
-                <td className="border-b px-4 py-2 text-sm">
-                  <pre className="whitespace-pre-wrap break-all">
-                    {event.metadata ? JSON.stringify(event.metadata, null, 2) : '—'}
-                  </pre>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+    <div className="min-h-screen w-full bg-white">
+      <img 
+        src="/wireframes/AuditLog.svg" 
+        alt="Audit Log Wireframe" 
+        className="w-full h-full object-contain"
+      />
     </div>
   );
 }

@@ -9,6 +9,8 @@ import { JwtModule } from '@nestjs/jwt';
 import { JwtStrategy } from './jwt.strategy';
 import { PasswordPolicyService } from './password-policy.service';
 import { SecurityEventsModule } from '../security-events/security-events.module';
+import { EmailModule } from '../email/email.module';
+import { PrismaModule } from '../prisma/prisma.module';
 
 @Module({
   imports: [
@@ -16,6 +18,8 @@ import { SecurityEventsModule } from '../security-events/security-events.module'
     UsersModule,
     PassportModule,
     SecurityEventsModule,
+    EmailModule,
+    PrismaModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

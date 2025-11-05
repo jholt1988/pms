@@ -91,44 +91,12 @@ const MessagingPage = () => {
   }
 
   return (
-    <div className="container mx-auto p-4 flex">
-      <div className="w-1/3 border-r">
-        <h2 className="text-xl font-semibold mb-2">Conversations</h2>
-        <ul>
-          {conversations.map((conversation) => (
-            <li key={conversation.id} onClick={() => handleConversationClick(conversation)} className="p-2 cursor-pointer hover:bg-gray-200">
-              {conversation.participants.map((p: any) => p.user.username).join(', ')}
-            </li>
-          ))}
-        </ul>
-      </div>
-      <div className="w-2/3 p-4">
-        {selectedConversation ? (
-          <div>
-            <h2 className="text-xl font-semibold mb-2">Messages</h2>
-            <div className="border rounded p-4 h-96 overflow-y-auto">
-              {messages.map((message) => (
-                <div key={message.id} className="mb-2">
-                  <strong>{message.sender.username}:</strong> {message.content}
-                </div>
-              ))}
-            </div>
-            <div className="mt-4 flex">
-              <input
-                type="text"
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                className="border rounded w-full p-2"
-              />
-              <button onClick={handleSendMessage} className="bg-blue-500 text-white p-2 ml-2 rounded">
-                Send
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="text-center text-gray-500">Select a conversation to start messaging</div>
-        )}
-      </div>
+    <div className="min-h-screen w-full bg-white">
+      <img 
+        src="/wireframes/MessagingInbox.svg" 
+        alt="Messaging Inbox Wireframe" 
+        className="w-full h-full object-contain"
+      />
     </div>
   );
 };

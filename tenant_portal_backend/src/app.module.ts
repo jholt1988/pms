@@ -16,6 +16,11 @@ import { RentEstimatorModule } from './rent-estimator/rent-estimator.module';
 import { PaymentsModule } from './payments/payments.module';
 import { BillingModule } from './billing/billing.module';
 import { SecurityEventsModule } from './security-events/security-events.module';
+import { EmailModule } from './email/email.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { DocumentsModule } from './documents/documents.module';
+import { ReportingModule } from './reporting/reporting.module';
+import { InspectionsModule } from './inspections/inspections.module';
 
 @Module({
   imports: [
@@ -33,6 +38,11 @@ import { SecurityEventsModule } from './security-events/security-events.module';
     RentEstimatorModule,
     BillingModule,
     SecurityEventsModule,
+    EmailModule,
+    NotificationsModule,
+    DocumentsModule,
+    ReportingModule,
+    InspectionsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
