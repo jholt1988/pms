@@ -28,6 +28,8 @@ const passport_1 = require("@nestjs/passport");
 const login_request_dto_1 = require("./dto/login-request.dto");
 const register_request_dto_1 = require("./dto/register-request.dto");
 const mfa_dto_1 = require("./dto/mfa.dto");
+const forgot_password_dto_1 = require("./dto/forgot-password.dto");
+const reset_password_dto_1 = require("./dto/reset-password.dto");
 let AuthController = class AuthController {
     constructor(authService) {
         this.authService = authService;
@@ -98,6 +100,26 @@ let AuthController = class AuthController {
         }
         return req.ip;
     }
+    forgotPassword(dto, req) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var _a;
+            yield this.authService.forgotPassword(dto.username, {
+                ipAddress: this.getRequestIp(req),
+                userAgent: (_a = req.headers['user-agent']) !== null && _a !== void 0 ? _a : undefined,
+            });
+            return { message: 'If a matching account was found, a password reset email has been sent.' };
+        });
+    }
+    resetPassword(dto, req) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var _a;
+            yield this.authService.resetPassword(dto.token, dto.newPassword, {
+                ipAddress: this.getRequestIp(req),
+                userAgent: (_a = req.headers['user-agent']) !== null && _a !== void 0 ? _a : undefined,
+            });
+            return { message: 'Password has been reset successfully.' };
+        });
+    }
 };
 exports.AuthController = AuthController;
 __decorate([
@@ -155,6 +177,22 @@ __decorate([
     __metadata("design:paramtypes", [Object, mfa_dto_1.MfaDisableDto]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "disableMfa", null);
+__decorate([
+    (0, common_1.Post)('forgot-password'),
+    __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [forgot_password_dto_1.ForgotPasswordDto, Object]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "forgotPassword", null);
+__decorate([
+    (0, common_1.Post)('reset-password'),
+    __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [reset_password_dto_1.ResetPasswordDto, Object]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "resetPassword", null);
 exports.AuthController = AuthController = __decorate([
     (0, common_1.Controller)('auth'),
     __metadata("design:paramtypes", [auth_service_1.AuthService])

@@ -10,7 +10,7 @@ const root = createRoot(container);
 root.render(
   <React.StrictMode>
     <AuthProvider>
-      <App />
+      <App className={"app"} />
     </AuthProvider>
   </React.StrictMode>
 );

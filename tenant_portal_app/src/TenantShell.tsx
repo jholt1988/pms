@@ -3,6 +3,7 @@ import { Link, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import NotificationCenter from './NotificationCenter';
 
+
 export default function TenantShell(): React.ReactElement {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -13,6 +14,7 @@ export default function TenantShell(): React.ReactElement {
   };
 
   return (
+    <>
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200">
@@ -103,16 +105,11 @@ export default function TenantShell(): React.ReactElement {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="min-h-screen w-full bg-white">
-          <img 
-            src="/wireframes/TenantShell.svg" 
-            alt="Tenant Shell Wireframe" 
-            className="w-full h-full object-contain"
-          />
+        <div className="space-y-6">
+          <Outlet />
         </div>
-        <Outlet />
       </main>
     </div>
+    </>
   );
 }
-

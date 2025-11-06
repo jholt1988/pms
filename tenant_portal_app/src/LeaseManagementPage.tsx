@@ -792,11 +792,11 @@ function LeaseManagementPage(): React.ReactElement {
   );
 
   if (!token) {
-    return <div>Please sign in to manage leases.</div>;
+    return <div className="p-4 text-sm text-gray-600">Please sign in to manage leases.</div>;
   }
 
   if (loading) {
-    return <div>Loading lease lifecycle…</div>;
+    return <div className="p-4 text-sm text-gray-600">Loading lease lifecycle…</div>;
   }
 
   const renderLeaseCard = (lease: Lease) => {
@@ -1324,12 +1324,104 @@ function LeaseManagementPage(): React.ReactElement {
   };
 
   return (
-    <div className="min-h-screen w-full bg-white">
-      <img 
-        src="/wireframes/LeasesOverview.svg" 
-        alt="Leases Overview Wireframe" 
-        className="w-full h-full object-contain"
-      />
+    <div className="space-y-8">
+      <header className="space-y-2">
+        <h1 className="text-2xl font-semibold text-gray-900">Lease lifecycle manager</h1>
+        <p className="text-sm text-gray-600">
+          Track occupancy, renewals, and compliance so every lease stays on schedule.
+        </p>
+      </header>
+
+      {error && (
+        <div className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>
+      )}
+      {feedback && (
+        <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+          {feedback}
+        </div>
+      )}
+
+      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <article className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+          <p className="text-sm font-medium text-gray-500">Total leases</p>
+          <p className="mt-2 text-2xl font-semibold text-gray-900">{insights.total}</p>
+        </article>
+        <article className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+          <p className="text-sm font-medium text-gray-500">Active</p>
+          <p className="mt-2 text-2xl font-semibold text-emerald-600">{insights.active}</p>
+        </article>
+        <article className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+          <p className="text-sm font-medium text-gray-500">Move-outs pending</p>
+          <p className="mt-2 text-2xl font-semibold text-amber-600">{insights.moveOut}</p>
+        </article>
+        <article className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+          <p className="text-sm font-medium text-gray-500">Renewals due ≤ 30d</p>
+          <p className="mt-2 text-2xl font-semibold text-indigo-600">{insights.renewalDueSoon}</p>
+          <p className="mt-1 text-xs text-gray-500">Overdue: {insights.renewalOverdue}</p>
+        </article>
+      </section>
+
+      <section className="space-y-4">
+        <h2 className="text-lg font-semibold text-gray-900">Pipeline overview</h2>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+          {boardData.map((column) => (
+            <article key={column.key} className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-gray-900">{column.title}</h3>
+                <span className="text-xs font-medium text-gray-500">{column.leases.length}</span>
+              </div>
+              <p className="mt-1 text-xs text-gray-500">{column.description}</p>
+              <ul className="mt-4 space-y-3 text-sm text-gray-700">
+                {column.leases.length === 0 ? (
+                  <li className="rounded border border-dashed border-gray-200 py-6 text-center text-xs text-gray-400">
+                    Empty
+                  </li>
+                ) : (
+                  column.leases.slice(0, 4).map((lease) => (
+                    <li key={lease.id} className="rounded border border-gray-200 bg-gray-50 p-3">
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-gray-900">{lease.tenant.username}</span>
+                        <span className="text-[11px] text-gray-500">End {formatDate(lease.endDate)}</span>
+                      </div>
+                      <p className="mt-1 text-xs text-gray-500">
+                        {lease.unit.property ? `${lease.unit.property.name} · ` : ''}{lease.unit.name}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => toggleExpanded(lease.id)}
+                        className="mt-2 text-xs font-semibold text-indigo-600 hover:text-indigo-500"
+                      >
+                        Manage
+                      </button>
+                    </li>
+                  ))
+                )}
+                {column.leases.length > 4 && (
+                  <li className="text-center text-xs text-gray-500">
+                    +{column.leases.length - 4} more
+                  </li>
+                )}
+              </ul>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-gray-900">Lease workflows</h2>
+          <p className="text-xs text-gray-500">Click a card to expand status, renewal, and notice actions.</p>
+        </div>
+        {leases.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-gray-300 bg-white py-12 text-center text-sm text-gray-500">
+            No leases found.
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {leases.map((lease) => renderLeaseCard(lease))}
+          </div>
+        )}
+      </section>
     </div>
   );
 }

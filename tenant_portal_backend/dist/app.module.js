@@ -24,6 +24,11 @@ const rent_estimator_module_1 = require("./rent-estimator/rent-estimator.module"
 const payments_module_1 = require("./payments/payments.module");
 const billing_module_1 = require("./billing/billing.module");
 const security_events_module_1 = require("./security-events/security-events.module");
+const email_module_1 = require("./email/email.module");
+const notifications_module_1 = require("./notifications/notifications.module");
+const documents_module_1 = require("./documents/documents.module");
+const reporting_module_1 = require("./reporting/reporting.module");
+const inspections_module_1 = require("./inspections/inspections.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -44,6 +49,11 @@ exports.AppModule = AppModule = __decorate([
             rent_estimator_module_1.RentEstimatorModule,
             billing_module_1.BillingModule,
             security_events_module_1.SecurityEventsModule,
+            email_module_1.EmailModule,
+            notifications_module_1.NotificationsModule,
+            documents_module_1.DocumentsModule,
+            reporting_module_1.ReportingModule,
+            inspections_module_1.InspectionsModule,
         ],
         controllers: [app_controller_1.AppController],
         providers: [app_service_1.AppService],

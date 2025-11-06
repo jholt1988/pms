@@ -99,14 +99,9 @@ export default function StaffShell(): React.ReactElement {
         {/* Page Content */}
         <main className="flex-1 overflow-y-auto">
           <div className="px-4 sm:px-6 lg:px-8 py-8">
-            <div className="min-h-screen w-full bg-white">
-              <img 
-                src="/wireframes/AppShell.svg" 
-                alt="App Shell Wireframe" 
-                className="w-full h-full object-contain"
-              />
+            <div className="space-y-8">
+              <Outlet />
             </div>
-            <Outlet />
           </div>
         </main>
       </div>

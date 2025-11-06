@@ -50,6 +50,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var AuthService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthService = void 0;
 const common_1 = require("@nestjs/common");
@@ -62,13 +63,19 @@ const config_1 = require("@nestjs/config");
 const client_1 = require("@prisma/client");
 const otplib_1 = require("otplib");
 const date_fns_1 = require("date-fns");
-let AuthService = class AuthService {
-    constructor(usersService, jwtService, passwordPolicy, securityEvents, configService) {
+const prisma_service_1 = require("../prisma/prisma.service");
+const email_service_1 = require("../email/email.service");
+const crypto_1 = require("crypto");
+let AuthService = AuthService_1 = class AuthService {
+    constructor(usersService, jwtService, passwordPolicy, securityEvents, configService, prisma, emailService) {
         this.usersService = usersService;
         this.jwtService = jwtService;
         this.passwordPolicy = passwordPolicy;
         this.securityEvents = securityEvents;
         this.configService = configService;
+        this.prisma = prisma;
+        this.emailService = emailService;
+        this.logger = new common_1.Logger(AuthService_1.name);
     }
     get maxFailedAttempts() {
         var _a;
@@ -179,11 +186,10 @@ let AuthService = class AuthService {
             if (policyErrors.length) {
                 throw new common_1.BadRequestException({ message: 'Password policy violation', errors: policyErrors });
             }
-            const salt = yield bcrypt.genSalt();
-            const hashedPassword = yield bcrypt.hash(dto.password, salt);
+            // Password hashing is now handled by UsersService
             const user = yield this.usersService.create({
                 username: dto.username,
-                password: hashedPassword,
+                password: dto.password,
                 passwordUpdatedAt: new Date(),
             });
             yield this.securityEvents.logEvent({
@@ -290,13 +296,94 @@ let AuthService = class AuthService {
             });
         });
     }
+    forgotPassword(username, context) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const user = yield this.usersService.findOne(username);
+            if (!user) {
+                // Don't reveal if user exists for security
+                return;
+            }
+            // Generate reset token
+            const token = (0, crypto_1.randomBytes)(32).toString('hex');
+            const expiresAt = (0, date_fns_1.addHours)(new Date(), 24);
+            // Invalidate any existing tokens for this user
+            yield this.prisma.PasswordResetToken.updateMany({
+                where: { userId: user.id, used: false },
+                data: { used: true },
+            });
+            // Create new token
+            yield this.prisma.PasswordResetToken.create({
+                data: {
+                    token,
+                    userId: user.id,
+                    expiresAt,
+                },
+            });
+            // Send email (using username as email for now - in production, add email field to User)
+            // Note: This assumes username is an email. In production, add separate email field.
+            try {
+                yield this.emailService.sendPasswordResetEmail(user.username, token, '');
+            }
+            catch (error) {
+                // Log error but don't fail the request
+                this.logger.error(`Failed to send password reset email: ${error}`);
+            }
+            yield this.securityEvents.logEvent({
+                type: client_1.SecurityEventType.PASSWORD_CHANGED,
+                success: true,
+                userId: user.id,
+                username: user.username,
+                ipAddress: context.ipAddress,
+                userAgent: context.userAgent,
+                metadata: { source: 'FORGOT_PASSWORD_REQUEST' },
+            });
+        });
+    }
+    resetPassword(token, newPassword, context) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!token || !newPassword) {
+                throw new common_1.BadRequestException('Token and new password are required');
+            }
+            // Find valid token, include the related user
+            const resetToken = yield this.prisma.PasswordResetToken.findUnique({
+                where: { token },
+                include: { user: true },
+            });
+            if (!resetToken || resetToken.used || resetToken.expiresAt < new Date()) {
+                throw new common_1.UnauthorizedException('Invalid or expired reset token');
+            }
+            // Validate password policy
+            const policyErrors = this.passwordPolicy.validate(newPassword);
+            if (policyErrors.length) {
+                throw new common_1.BadRequestException({ message: 'Password policy violation', errors: policyErrors });
+            }
+            // Update password
+            // Mark token as used
+            yield this.prisma.PasswordResetToken.update({
+                where: { id: resetToken.id },
+                data: { used: true },
+            });
+            yield this.usersService.update(resetToken.userId, { password: newPassword, passwordUpdatedAt: new Date() });
+            yield this.securityEvents.logEvent({
+                type: client_1.SecurityEventType.PASSWORD_CHANGED,
+                success: true,
+                userId: resetToken.userId,
+                username: resetToken.user.username,
+                ipAddress: context.ipAddress,
+                userAgent: context.userAgent,
+                metadata: { source: 'PASSWORD_RESET' },
+            });
+        });
+    }
 };
 exports.AuthService = AuthService;
-exports.AuthService = AuthService = __decorate([
+exports.AuthService = AuthService = AuthService_1 = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [users_service_1.UsersService,
         jwt_1.JwtService,
         password_policy_service_1.PasswordPolicyService,
         security_events_service_1.SecurityEventsService,
-        config_1.ConfigService])
+        config_1.ConfigService,
+        prisma_service_1.PrismaService,
+        email_service_1.EmailService])
 ], AuthService);

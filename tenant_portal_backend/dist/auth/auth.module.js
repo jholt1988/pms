@@ -17,6 +17,8 @@ const jwt_1 = require("@nestjs/jwt");
 const jwt_strategy_1 = require("./jwt.strategy");
 const password_policy_service_1 = require("./password-policy.service");
 const security_events_module_1 = require("../security-events/security-events.module");
+const email_module_1 = require("../email/email.module");
+const prisma_module_1 = require("../prisma/prisma.module");
 let AuthModule = class AuthModule {
 };
 exports.AuthModule = AuthModule;
@@ -27,6 +29,8 @@ exports.AuthModule = AuthModule = __decorate([
             users_module_1.UsersModule,
             passport_1.PassportModule,
             security_events_module_1.SecurityEventsModule,
+            email_module_1.EmailModule,
+            prisma_module_1.PrismaModule,
             jwt_1.JwtModule.registerAsync({
                 imports: [config_1.ConfigModule],
                 inject: [config_1.ConfigService],

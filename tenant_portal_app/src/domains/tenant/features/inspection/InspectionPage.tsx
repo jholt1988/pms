@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from './AuthContext';
+import { useAuth } from '../../../../AuthContext';
 
 interface Inspection {
   id: number;
@@ -37,11 +37,7 @@ export default function TenantInspectionPage(): React.ReactElement {
   const [error, setError] = useState<string | null>(null);
   const [selectedInspection, setSelectedInspection] = useState<Inspection | null>(null);
 
-  useEffect(() => {
-    fetchInspections();
-  }, []);
-
-  const fetchInspections = async () => {
+  const fetchInspections = React.useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -62,7 +58,11 @@ export default function TenantInspectionPage(): React.ReactElement {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
+
+  useEffect(() => {
+    fetchInspections();
+  }, [fetchInspections]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
