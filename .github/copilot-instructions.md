@@ -107,10 +107,27 @@ npm start  # Runs on port 3000
 # ML Service (Terminal 3) - Only if using AI features
 cd rent_optimization_ml
 python -m venv venv
-venv\Scripts\activate  # Windows
+venv\Scripts\activate  # Windows (PowerShell: venv\Scripts\Activate.ps1)
 pip install -r requirements.txt
 uvicorn main:app --reload --port 8000
 ```
+
+### Environment Configuration
+**Backend:** Create `.env` file (no example exists, configure manually)
+- `DATABASE_URL` - PostgreSQL connection string
+- `JWT_SECRET` - Secret for token signing
+- `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS` - Email configuration
+
+**Frontend:** Copy `tenant_portal_app/.env.example` to `.env.local`
+- Uses `VITE_` prefix for all environment variables
+- Mock mode by default: `VITE_LLM_PROVIDER=mock`, `VITE_MARKET_DATA_PROVIDER=mock`
+- Production mode: Set API keys and change providers (e.g., `VITE_MARKET_DATA_PROVIDER=rentometer`)
+- Feature flags: `VITE_FEATURE_RENT_OPTIMIZATION=true` (toggle AI features)
+
+**ML Service:** Copy `rent_optimization_ml/.env.example` to `.env`
+- `DATABASE_URL` - Same as backend for training data access
+- `RENTOMETER_API_KEY`, `ZILLOW_API_KEY` - Market data APIs
+- `CORS_ORIGINS` - Must include frontend URL (http://localhost:3000)
 
 ### Database Operations
 ```bash
@@ -131,9 +148,17 @@ npx prisma studio
 
 ### Testing Strategy
 - **Unit tests**: `npm test` - 141 tests covering services
-- **E2E tests**: `npm run test:e2e` - Requires separate test database
+- **E2E tests**: `npm run test:e2e` - Requires separate test database setup
+- **E2E Database Setup** (Windows): Run `.\setup-e2e-db.ps1` or manually create `tenant_portal_test_DB`
 - Test factories in `test/factories/index.ts` - Use for consistent test data
 - **Always mock PrismaService in unit tests** (see `payments.service.spec.ts` for pattern)
+
+**E2E Test Database Requirements:**
+```sql
+-- Create test database
+CREATE DATABASE tenant_portal_test_DB;
+-- Run migrations: npx prisma migrate deploy --schema=./prisma/schema.prisma
+```
 
 ## Project-Specific Conventions
 
@@ -192,6 +217,12 @@ FAQ-based with 8 categories. Located in `tenant_portal_app/src/domains/shared/ai
 - Session management with 30min timeout
 - Expandable to LLM-based responses
 
+**Frontend Mock Mode vs Production:**
+- Development uses mock providers by default (zero-cost, no API keys)
+- Switch providers via `.env.local`: `VITE_LLM_PROVIDER=openai`, `VITE_MARKET_DATA_PROVIDER=rentometer`
+- Feature flags control availability: `VITE_FEATURE_RENT_OPTIMIZATION=true`
+- See `tenant_portal_app/src/domains/shared/ai-services/README.md` for configuration
+
 ## Common Pitfalls
 
 ### Database
@@ -207,12 +238,17 @@ FAQ-based with 8 categories. Located in `tenant_portal_app/src/domains/shared/ai
 ### Frontend
 - ❌ Don't fetch API directly in components (use service layer in `domains/shared/`)
 - ❌ Don't store sensitive data in localStorage (use httpOnly cookies for tokens when possible)
-- ❌ Don't hardcode API URLs (use environment variables: `process.env.REACT_APP_API_URL`)
+- ❌ Don't hardcode API URLs (use environment variables: `VITE_API_URL` for Vite, not `REACT_APP_`)
 
 ### ML Service
 - ❌ Don't commit `.env` files (use `.env.example` as template)
 - ❌ Don't commit trained models to Git (use Git LFS: `git lfs track "*.joblib"`)
 - ❌ Don't assume ML service is always running (handle connection errors gracefully)
+
+### Windows Development
+- ✅ Use `venv\Scripts\activate` for PowerShell: `venv\Scripts\Activate.ps1`
+- ✅ Run E2E setup script: `.\setup-e2e-db.ps1` (not `./setup-e2e-db.ps1`)
+- ✅ Use `&&` only in Git Bash; use separate commands in cmd.exe
 
 ## Key Files to Reference
 
@@ -237,6 +273,17 @@ FAQ-based with 8 categories. Located in `tenant_portal_app/src/domains/shared/ai
 - `AI_FEATURES_PHASE_3_COMPLETE.md` - AI implementation status
 - `TESTING_STATUS.md` - Testing infrastructure and coverage
 - `tenant_portal_app/docs/ADR.md` - Architecture decision records
+
+## ML Model Performance
+
+### Rent Optimization Model (XGBoost v1.0.0)
+- **Status:** Operational and production-ready
+- **Performance:** MAE $298.25, R² 0.85
+- **Features:** 27 engineered features (property characteristics, market data, temporal patterns)
+- **Training:** `python scripts/train_model.py` (see `TRAINING_GUIDE.md`)
+- **Model File:** `models/rent_predictor.joblib` (Git LFS tracked)
+- **API Endpoint:** FastAPI on port 8000, `/predict` endpoint
+- **Market Data:** Rentcast (primary), Rentometer (fallback)
 
 ## External Dependencies
 
