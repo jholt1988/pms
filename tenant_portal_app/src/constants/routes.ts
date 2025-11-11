@@ -39,6 +39,7 @@ export const ROUTES = {
     REPORTS: '/reports',
     USER_MANAGEMENT: '/user-management',
     AUDIT_LOG: '/audit-log',
+    RENT_OPTIMIZATION: '/rent-optimization',
   },
 
   // Admin Routes

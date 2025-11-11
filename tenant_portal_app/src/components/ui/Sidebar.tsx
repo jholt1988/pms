@@ -15,7 +15,8 @@ import {
   Files,
   LifeBuoy,
   LogOut,
-  ChevronRight
+  ChevronRight,
+  TrendingUp
 } from 'lucide-react';
 
 export type UserRole = 'TENANT' | 'PROPERTY_MANAGER' | 'ADMIN';
@@ -53,6 +54,7 @@ const toolsLinks: NavLink[] = [
   { path: '/documents', label: 'Documents', icon: Files, roles: ['TENANT', 'PROPERTY_MANAGER', 'ADMIN'], showDot: true },
   { path: '/expense-tracker', label: 'Expenses', icon: Wallet, roles: ['PROPERTY_MANAGER', 'ADMIN'] },
   { path: '/rent-estimator', label: 'Rent Estimator', icon: ScanLine, roles: ['PROPERTY_MANAGER', 'ADMIN'] },
+  { path: '/rent-optimization', label: 'AI Rent Optimization', icon: TrendingUp, roles: ['PROPERTY_MANAGER', 'ADMIN'], showDot: true },
   { path: '/user-management', label: 'User Management', icon: Users, roles: ['ADMIN'] },
 ];
 
