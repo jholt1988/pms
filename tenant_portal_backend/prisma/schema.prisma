@@ -48,6 +48,7 @@ model User {
   inspections               UnitInspection[]            @relation("Inspector")
   createdInspections        UnitInspection[]            @relation("CreatedBy")
   UnitInspectionPhoto       UnitInspectionPhoto[]
+  scheduleEvents            ScheduleEvent[]             @relation("ScheduleEventTenant")
 }
 
 model Property {
@@ -62,6 +63,7 @@ model Property {
   MaintenanceSlaPolicy MaintenanceSlaPolicy[]
   Document             Document[]
   UnitInspection       UnitInspection[]
+  scheduleEvents       ScheduleEvent[]
 }
 
 model Unit {
@@ -75,6 +77,7 @@ model Unit {
   MaintenanceRequest MaintenanceRequest[]
   MaintenanceAsset   MaintenanceAsset[]
   inspections        UnitInspection[]
+  scheduleEvents     ScheduleEvent[]
 }
 
 model Lease {
@@ -792,4 +795,44 @@ enum InspectionStatus {
   IN_PROGRESS
   COMPLETED
   CANCELLED
+}
+
+model ScheduleEvent {
+  id          Int               @id @default(autoincrement())
+  type        ScheduleEventType
+  title       String
+  date        DateTime
+  priority    EventPriority     @default(MEDIUM)
+  description String?
+  status      String?           @default("SCHEDULED")
+  property    Property?         @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+  propertyId  Int?
+  unit        Unit?             @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  unitId      Int?
+  tenant      User?             @relation("ScheduleEventTenant", fields: [tenantId], references: [id], onDelete: SetNull)
+  tenantId    Int?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@index([date])
+  @@index([type])
+  @@index([priority])
+  @@index([propertyId])
+}
+
+enum ScheduleEventType {
+  TOUR
+  MOVE_IN
+  MOVE_OUT
+  LEASE_EXPIRATION
+  LEASE_RENEWAL
+  INSPECTION
+  MAINTENANCE
+}
+
+enum EventPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
 }

@@ -21,6 +21,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { DocumentsModule } from './documents/documents.module';
 import { ReportingModule } from './reporting/reporting.module';
 import { InspectionsModule } from './inspections/inspections.module';
+import { EventScheduleModule } from './schedule/schedule.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { InspectionsModule } from './inspections/inspections.module';
     DocumentsModule,
     ReportingModule,
     InspectionsModule,
+    EventScheduleModule,
   ],
   controllers: [AppController],
   providers: [AppService],

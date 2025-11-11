@@ -146,11 +146,19 @@ export class AuthService {
     if (policyErrors.length) {
       throw new BadRequestException({ message: 'Password policy violation', errors: policyErrors });
     }
+    
+    // Security: Prevent self-registration as PROPERTY_MANAGER
+    // Only TENANT role is allowed during public registration
+    if (dto.role && dto.role !== 'TENANT') {
+      throw new BadRequestException('Self-registration is only allowed for tenant accounts. Contact an administrator to create a property manager account.');
+    }
+    
     // Password hashing is now handled by UsersService
     const user = await this.usersService.create({
       username: dto.username,
       password: dto.password,
       passwordUpdatedAt: new Date(),
+      role: 'TENANT', // Force TENANT role for all public registrations
     });
 
     await this.securityEvents.logEvent({

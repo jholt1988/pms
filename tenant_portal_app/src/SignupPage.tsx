@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 const SignupPage: React.FC = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [role, setRole] = useState<'TENANT' | 'PROPERTY_MANAGER'>('TENANT');
   const [policy, setPolicy] = useState<{
     minLength: number;
     requireUppercase: boolean;
@@ -41,7 +42,7 @@ const SignupPage: React.FC = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username, password, role }),
       });
 
       if (!response.ok) {
@@ -91,6 +92,20 @@ const SignupPage: React.FC = () => {
                 onChange={(event) => setUsername(event.target.value)}
                 className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               />
+            </div>
+            <div>
+              <label htmlFor="role" className="block text-sm font-medium text-gray-700">
+                Account Type
+              </label>
+              <select
+                id="role"
+                value={role}
+                onChange={(event) => setRole(event.target.value as 'TENANT' | 'PROPERTY_MANAGER')}
+                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              >
+                <option value="TENANT">Tenant - Access rental applications, lease info, and payments</option>
+                <option value="PROPERTY_MANAGER">Property Manager - Manage properties, tenants, and maintenance</option>
+              </select>
             </div>
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700">

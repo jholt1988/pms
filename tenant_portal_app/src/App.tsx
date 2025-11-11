@@ -16,6 +16,8 @@ import UserManagementPage from './UserManagementPage';
 import NotFoundPage from './NotFoundPage';
 import UnauthorizedPage from './UnauthorizedPage';
 import PropertyManagerDashboard from './PropertyManagerDashboard';
+import PropertyManagementPage from './PropertyManagementPage';
+import SchedulePage from './SchedulePage';
 
 import InspectionManagementPage from './InspectionManagementPage';
 import { AppShell } from './components/ui/AppShell';
@@ -165,6 +167,8 @@ export default function App({className}: {className: string}): React.ReactElemen
               <Route path="messaging" element={<MessagingPage />} />
 
               <Route element={<RequireRole allowedRoles={['PROPERTY_MANAGER']} />}>
+                <Route path="properties" element={<PropertyManagementPage />} />
+                <Route path="schedule" element={<SchedulePage />} />
                 <Route path="lease-management" element={<LeaseManagementPageModern />} />
                 <Route path="rental-applications-management" element={<RentalApplicationsManagementPage />} />
                 <Route path="expense-tracker" element={<ExpenseTrackerPageModern />} />

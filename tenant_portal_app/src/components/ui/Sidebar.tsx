@@ -49,6 +49,7 @@ const mainNavigationLinks: NavLink[] = [
 
 const toolsLinks: NavLink[] = [
   { path: '/schedule', label: 'Schedule', icon: Calendar, roles: ['TENANT', 'PROPERTY_MANAGER', 'ADMIN'], showDot: true },
+  { path: '/properties', label: 'Properties', icon: Building2, roles: ['PROPERTY_MANAGER', 'ADMIN'], showDot: true },
   { path: '/documents', label: 'Documents', icon: Files, roles: ['TENANT', 'PROPERTY_MANAGER', 'ADMIN'], showDot: true },
   { path: '/expense-tracker', label: 'Expenses', icon: Wallet, roles: ['PROPERTY_MANAGER', 'ADMIN'] },
   { path: '/rent-estimator', label: 'Rent Estimator', icon: ScanLine, roles: ['PROPERTY_MANAGER', 'ADMIN'] },

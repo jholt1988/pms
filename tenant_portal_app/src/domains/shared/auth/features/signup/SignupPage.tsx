@@ -29,6 +29,7 @@ export const SignupPage: React.FC = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [role] = useState<'TENANT' | 'PROPERTY_MANAGER'>('TENANT');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [policy, setPolicy] = useState<PasswordPolicy | null>(null);
@@ -129,7 +130,7 @@ export const SignupPage: React.FC = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username, password, role }),
       });
 
       if (!response.ok) {

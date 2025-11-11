@@ -124,6 +124,28 @@ async function ensureAsset(propertyId: number, unitId: number | null, name: stri
 async function main() {
   console.info('🌱 Seeding comprehensive test data...');
 
+  // 0. Create initial Property Manager account
+  console.info('👤 Creating initial property manager account...');
+  const adminHashedPassword = await bcrypt.hash('Admin123!@#', 10);
+  
+  const adminUser = await prisma.user.upsert({
+    where: { username: 'admin' },
+    update: {
+      password: adminHashedPassword,
+      role: Role.PROPERTY_MANAGER,
+      passwordUpdatedAt: new Date(),
+    },
+    create: {
+      username: 'admin',
+      password: adminHashedPassword,
+      role: Role.PROPERTY_MANAGER,
+      passwordUpdatedAt: new Date(),
+    },
+  });
+  
+  console.info(`✅ Property Manager created: ${adminUser.username} (ID: ${adminUser.id})`);
+  console.info(`   Default password: Admin123!@# (Please change after first login)`);
+
   // 1. Create SLA Policies
   console.info('📋 Creating SLA policies...');
   await ensureGlobalSla(MaintenancePriority.EMERGENCY, 240, 60);
