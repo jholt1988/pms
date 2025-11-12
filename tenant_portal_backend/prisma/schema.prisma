@@ -46,8 +46,13 @@ model User {
   documents                 Document[]
   sharedDocuments           Document[]                  @relation("DocumentShares")
   inspections               UnitInspection[]            @relation("Inspector")
+  tenantInspections         UnitInspection[]            @relation("InspectionTenant")
   createdInspections        UnitInspection[]            @relation("CreatedBy")
   UnitInspectionPhoto       UnitInspectionPhoto[]
+  checklistPhotos           InspectionChecklistPhoto[]  @relation("ChecklistPhotoUploader")
+  inspectionSignatures      InspectionSignature[]       @relation("InspectionSigner")
+  generatedEstimates        RepairEstimate[]            @relation("GeneratedEstimates")
+  approvedEstimates         RepairEstimate[]            @relation("ApprovedEstimates")
   scheduleEvents            ScheduleEvent[]             @relation("ScheduleEventTenant")
 }
 
@@ -63,6 +68,7 @@ model Property {
   MaintenanceSlaPolicy MaintenanceSlaPolicy[]
   Document             Document[]
   UnitInspection       UnitInspection[]
+  repairEstimates      RepairEstimate[]
   scheduleEvents       ScheduleEvent[]
 }
 
@@ -77,6 +83,7 @@ model Unit {
   MaintenanceRequest MaintenanceRequest[]
   MaintenanceAsset   MaintenanceAsset[]
   inspections        UnitInspection[]
+  repairEstimates    RepairEstimate[]
   scheduleEvents     ScheduleEvent[]
 }
 
@@ -119,6 +126,7 @@ model Lease {
   renewalOffers             LeaseRenewalOffer[]
   notices                   LeaseNotice[]
   maintenanceRequests       MaintenanceRequest[]
+  inspections               UnitInspection[]
 
   @@index([status])
   @@index([endDate])
@@ -150,6 +158,7 @@ model MaintenanceRequest {
   slaPolicyId    Int?
   lease          Lease?                      @relation(fields: [leaseId], references: [id])
   leaseId        Int?
+  repairEstimates RepairEstimate[]
   history        MaintenanceRequestHistory[]
   notes          MaintenanceNote[]
   photos         MaintenancePhoto[]
@@ -743,27 +752,38 @@ enum NotificationType {
 }
 
 model UnitInspection {
-  id            Int                   @id @default(autoincrement())
-  unit          Unit                  @relation(fields: [unitId], references: [id])
-  unitId        Int
-  property      Property              @relation(fields: [propertyId], references: [id])
-  propertyId    Int
-  type          InspectionType
-  status        InspectionStatus      @default(SCHEDULED)
-  scheduledDate DateTime
-  completedDate DateTime?
-  inspector     User?                 @relation("Inspector", fields: [inspectorId], references: [id])
-  inspectorId   Int?
-  createdBy     User                  @relation("CreatedBy", fields: [createdById], references: [id])
-  createdById   Int
-  notes         String?
-  findings      Json?
-  photos        UnitInspectionPhoto[]
-  createdAt     DateTime              @default(now())
-  updatedAt     DateTime              @updatedAt
+  id                Int                   @id @default(autoincrement())
+  unit              Unit                  @relation(fields: [unitId], references: [id])
+  unitId            Int
+  property          Property              @relation(fields: [propertyId], references: [id])
+  propertyId        Int
+  lease             Lease?                @relation(fields: [leaseId], references: [id])
+  leaseId           Int?
+  type              InspectionType
+  status            InspectionStatus      @default(SCHEDULED)
+  scheduledDate     DateTime
+  completedDate     DateTime?
+  inspector         User?                 @relation("Inspector", fields: [inspectorId], references: [id])
+  inspectorId       Int?
+  tenant            User?                 @relation("InspectionTenant", fields: [tenantId], references: [id])
+  tenantId          Int?
+  createdBy         User                  @relation("CreatedBy", fields: [createdById], references: [id])
+  createdById       Int
+  notes             String?
+  generalNotes      String?
+  findings          Json?
+  reportGenerated   Boolean               @default(false)
+  reportPath        String?
+  photos            UnitInspectionPhoto[]
+  rooms             InspectionRoom[]
+  signatures        InspectionSignature[]
+  repairEstimates   RepairEstimate[]
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
 
   @@index([unitId])
   @@index([propertyId])
+  @@index([leaseId])
   @@index([status])
   @@index([scheduledDate])
   @@index([inspectorId])
@@ -786,6 +806,8 @@ enum InspectionType {
   MOVE_IN
   MOVE_OUT
   ROUTINE
+  ANNUAL
+  EMERGENCY
   DAMAGE
   COMPLIANCE
 }
@@ -795,6 +817,175 @@ enum InspectionStatus {
   IN_PROGRESS
   COMPLETED
   CANCELLED
+}
+
+model InspectionRoom {
+  id           Int                      @id @default(autoincrement())
+  inspection   UnitInspection           @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+  inspectionId Int
+  name         String
+  roomType     RoomType
+  checklistItems InspectionChecklistItem[]
+  
+  @@index([inspectionId])
+}
+
+model InspectionChecklistItem {
+  id              Int                        @id @default(autoincrement())
+  room            InspectionRoom             @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  roomId          Int
+  category        String
+  itemName        String
+  condition       InspectionCondition?
+  notes           String?
+  estimatedAge    Int?                       // Age in years
+  requiresAction  Boolean                    @default(false)
+  photos          InspectionChecklistPhoto[]
+  subItems        InspectionChecklistSubItem[]
+  
+  @@index([roomId])
+  @@index([condition])
+  @@index([requiresAction])
+}
+
+model InspectionChecklistSubItem {
+  id              Int                     @id @default(autoincrement())
+  parentItem      InspectionChecklistItem @relation(fields: [parentItemId], references: [id], onDelete: Cascade)
+  parentItemId    Int
+  name            String
+  condition       InspectionCondition?
+  estimatedAge    Int?
+  
+  @@index([parentItemId])
+}
+
+model InspectionChecklistPhoto {
+  id              Int                     @id @default(autoincrement())
+  checklistItem   InspectionChecklistItem @relation(fields: [checklistItemId], references: [id], onDelete: Cascade)
+  checklistItemId Int
+  uploadedBy      User                    @relation("ChecklistPhotoUploader", fields: [uploadedById], references: [id])
+  uploadedById    Int
+  url             String
+  caption         String?
+  createdAt       DateTime                @default(now())
+  
+  @@index([checklistItemId])
+}
+
+model InspectionSignature {
+  id           Int            @id @default(autoincrement())
+  inspection   UnitInspection @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+  inspectionId Int
+  user         User           @relation("InspectionSigner", fields: [userId], references: [id])
+  userId       Int
+  role         String
+  signatureData String        // Base64 encoded signature image
+  signedAt     DateTime       @default(now())
+  
+  @@index([inspectionId])
+  @@index([userId])
+}
+
+model RepairEstimate {
+  id                    Int                   @id @default(autoincrement())
+  inspection            UnitInspection?       @relation(fields: [inspectionId], references: [id])
+  inspectionId          Int?
+  maintenanceRequest    MaintenanceRequest?   @relation(fields: [maintenanceRequestId], references: [id])
+  maintenanceRequestId  Int?
+  property              Property?             @relation(fields: [propertyId], references: [id])
+  propertyId            Int?
+  unit                  Unit?                 @relation(fields: [unitId], references: [id])
+  unitId                Int?
+  
+  // Estimate summary
+  totalLaborCost        Float
+  totalMaterialCost     Float
+  totalProjectCost      Float
+  itemsToRepair         Int
+  itemsToReplace        Int
+  
+  // Metadata
+  currency              String                @default("USD")
+  generatedAt           DateTime              @default(now())
+  generatedBy           User                  @relation("GeneratedEstimates", fields: [generatedById], references: [id])
+  generatedById         Int
+  status                EstimateStatus        @default(DRAFT)
+  approvedAt            DateTime?
+  approvedBy            User?                 @relation("ApprovedEstimates", fields: [approvedById], references: [id])
+  approvedById          Int?
+  
+  lineItems             RepairEstimateLineItem[]
+  
+  @@index([inspectionId])
+  @@index([maintenanceRequestId])
+  @@index([status])
+}
+
+model RepairEstimateLineItem {
+  id                    Int            @id @default(autoincrement())
+  estimate              RepairEstimate @relation(fields: [estimateId], references: [id], onDelete: Cascade)
+  estimateId            Int
+  
+  // Item identification
+  itemDescription       String
+  location              String
+  category              String         // plumbing, electrical, HVAC, etc.
+  issueType             String         // repair, replace
+  
+  // Cost breakdown
+  laborHours            Float?
+  laborRate             Float?
+  laborCost             Float
+  materialCost          Float
+  totalCost             Float
+  
+  // Depreciation & condition
+  originalCost          Float?
+  depreciatedValue      Float?
+  depreciationRate      Float?
+  conditionAdjustment   Float?
+  estimatedLifetime     Int?           // Years
+  currentAge            Int?           // Years
+  
+  // Additional details
+  repairInstructions    String?
+  notes                 String?
+  
+  @@index([estimateId])
+  @@index([category])
+}
+
+enum InspectionCondition {
+  EXCELLENT
+  GOOD
+  FAIR
+  POOR
+  DAMAGED
+  NON_FUNCTIONAL
+}
+
+enum RoomType {
+  BEDROOM
+  BATHROOM
+  KITCHEN
+  LIVING_ROOM
+  DINING_ROOM
+  UTILITY_ROOM
+  EXTERIOR_BUILDING
+  EXTERIOR_LANDSCAPING
+  EXTERIOR_PARKING
+  COMMON_HALLWAYS
+  COMMON_LAUNDRY
+  COMMON_LOBBY
+  OTHER
+}
+
+enum EstimateStatus {
+  DRAFT
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+  COMPLETED
 }
 
 model ScheduleEvent {
