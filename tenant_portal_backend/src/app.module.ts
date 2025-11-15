@@ -2,6 +2,10 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { WinstonModule } from 'nest-winston';
+import { APP_GUARD } from '@nestjs/core';
+import { winstonConfig } from './config/winston.config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
@@ -22,11 +26,34 @@ import { DocumentsModule } from './documents/documents.module';
 import { ReportingModule } from './reporting/reporting.module';
 import { InspectionsModule } from './inspections/inspections.module';
 import { EventScheduleModule } from './schedule/schedule.module';
+import { HealthModule } from './health/health.module';
+import { JobsModule } from './jobs/jobs.module';
+import { QuickBooksModule } from './quickbooks/quickbooks.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     ScheduleModule.forRoot(),
+    // Winston logging
+    WinstonModule.forRoot(winstonConfig),
+    // Rate limiting configuration
+    ThrottlerModule.forRoot([
+      {
+        name: 'short',
+        ttl: 1000, // 1 second
+        limit: 3, // limit each IP to 3 requests per second
+      },
+      {
+        name: 'medium',
+        ttl: 10000, // 10 seconds  
+        limit: 20, // limit each IP to 20 requests per 10 seconds
+      },
+      {
+        name: 'long',
+        ttl: 60000, // 1 minute
+        limit: 100, // limit each IP to 100 requests per minute
+      },
+    ]),
     PrismaModule,
     AuthModule,
     MaintenanceModule,
@@ -45,8 +72,18 @@ import { EventScheduleModule } from './schedule/schedule.module';
     ReportingModule,
     InspectionsModule,
     EventScheduleModule,
+    // HealthModule, // Temporarily disabled due to TypeORM dependency conflict
+    JobsModule,
+    QuickBooksModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    // Global rate limiting guard
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}

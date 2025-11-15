@@ -30,7 +30,7 @@ import { PrismaModule } from '../prisma/prisma.module';
         }
         return {
           secret,
-          signOptions: { expiresIn: configService.get<string>('JWT_EXPIRES_IN', '60m') },
+          signOptions: { expiresIn: configService.get<string>('JWT_EXPIRES_IN', '60m') as any },
         };
       },
     }),

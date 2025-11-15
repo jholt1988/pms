@@ -1,10 +1,23 @@
-
-import { Controller, Get, Post, Body, UseGuards, Request, Param } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  UseGuards,
+  Request,
+  Param,
+  ParseIntPipe,
+  HttpCode,
+  HttpStatus,
+  ValidationPipe,
+  UsePipes,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { PropertyService } from './property.service';
 import { Roles } from '../auth/roles.decorator';
 import { Role } from '@prisma/client';
 import { RolesGuard } from '../auth/roles.guard';
+import { CreatePropertyDto, CreateUnitDto } from './dto/property.dto';
 
 interface AuthenticatedRequest extends Request {
   user: {
@@ -13,22 +26,28 @@ interface AuthenticatedRequest extends Request {
   };
 }
 
-@Controller('properties')
+@Controller('api/properties')
+@UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
 export class PropertyController {
   constructor(private readonly propertyService: PropertyService) {}
 
   @Post()
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(Role.PROPERTY_MANAGER)
-  createProperty(@Body() data: { name: string; address: string }) {
-    return this.propertyService.createProperty(data);
+  @HttpCode(HttpStatus.CREATED)
+  createProperty(@Body() dto: CreatePropertyDto) {
+    return this.propertyService.createProperty(dto);
   }
 
   @Post(':id/units')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(Role.PROPERTY_MANAGER)
-  createUnit(@Param('id') propertyId: string, @Body() data: { name: string }) {
-    return this.propertyService.createUnit(Number(propertyId), data.name);
+  @HttpCode(HttpStatus.CREATED)
+  createUnit(
+    @Param('id', ParseIntPipe) propertyId: number,
+    @Body() dto: CreateUnitDto,
+  ) {
+    return this.propertyService.createUnit(propertyId, dto.name);
   }
 
   @Get()
@@ -46,7 +65,7 @@ export class PropertyController {
   @Get(':id')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(Role.PROPERTY_MANAGER)
-  getPropertyById(@Param('id') id: string) {
-    return this.propertyService.getPropertyById(Number(id));
+  getPropertyById(@Param('id', ParseIntPipe) id: number) {
+    return this.propertyService.getPropertyById(id);
   }
 }
