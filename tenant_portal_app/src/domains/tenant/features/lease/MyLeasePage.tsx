@@ -1,6 +1,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../../../AuthContext';
+import { createRecipientView, EsignEnvelope } from '../../../services/EsignatureApi';
 
 type LeaseStatus =
   | 'DRAFT'
@@ -78,12 +79,13 @@ interface Lease {
   renewalDueAt?: string | null;
   renewalAcceptedAt?: string | null;
   currentBalance?: number | null;
-  tenant?: { username: string };
+  tenant?: { id: number; username: string };
   unit: { name: string; property?: { name: string } | null };
   renewalOffers?: LeaseRenewalOffer[];
   notices?: LeaseNotice[];
   autopayEnrollment?: AutopayEnrollment | null;
   history?: LeaseHistoryEntry[];
+  esignEnvelopes?: EsignEnvelope[];
 }
 
 interface NoticeFormState {
@@ -214,6 +216,11 @@ const MyLeasePage: React.FC = () => {
   const [noticeSubmitting, setNoticeSubmitting] = useState(false);
   const [responseSubmitting, setResponseSubmitting] = useState<number | null>(null);
   const [responseNotes, setResponseNotes] = useState<Record<number, string>>({});
+  const [signingStatus, setSigningStatus] = useState<{ loading: boolean; message?: string | null; error?: string | null }>({
+    loading: false,
+    message: null,
+    error: null,
+  });
 
   const headers = useMemo(
     () => (token ? { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } : undefined),
@@ -251,6 +258,24 @@ const MyLeasePage: React.FC = () => {
 
     fetchLease();
   }, [token]);
+
+  const launchSigningSession = async (envelopeId: number) => {
+    if (!token) {
+      return;
+    }
+    setSigningStatus({ loading: true, message: null, error: null });
+    try {
+      const url = await createRecipientView(token, envelopeId, window.location.href);
+      window.open(url, '_blank');
+      setSigningStatus({ loading: false, message: 'Signing session opened in a new tab.', error: null });
+    } catch (err) {
+      setSigningStatus({
+        loading: false,
+        message: null,
+        error: err instanceof Error ? err.message : 'Unable to launch signing session.',
+      });
+    }
+  };
 
   const activeOffers = useMemo(
     () => (lease?.renewalOffers ?? []).filter((offer) => offer.status === 'OFFERED'),
@@ -443,6 +468,63 @@ const MyLeasePage: React.FC = () => {
             {lease.autoRenewLeadDays != null && ` · Lead time ${lease.autoRenewLeadDays} days`}
           </p>
         </div>
+      </section>
+
+      <section className="space-y-3 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+        <header className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Digital Signatures</h2>
+            <p className="text-xs text-gray-500">Track outstanding lease packets and launch signing sessions.</p>
+          </div>
+        </header>
+
+        {signingStatus.error && (
+          <p className="rounded border border-rose-200 bg-rose-50 p-2 text-xs text-rose-700">{signingStatus.error}</p>
+        )}
+        {signingStatus.message && (
+          <p className="rounded border border-emerald-200 bg-emerald-50 p-2 text-xs text-emerald-700">{signingStatus.message}</p>
+        )}
+
+        {(lease?.esignEnvelopes ?? []).length === 0 ? (
+          <p className="text-sm text-gray-600">No signature packets have been sent yet.</p>
+        ) : (
+          <div className="space-y-3">
+            {lease?.esignEnvelopes?.map((envelope) => {
+              const participant = envelope.participants?.find(
+                (p) => p.userId === lease?.tenant?.id || p.email === lease?.tenant?.username,
+              );
+              const isComplete = envelope.status === 'COMPLETED' || participant?.status === 'SIGNED';
+              return (
+                <div key={envelope.id} className="rounded border border-gray-200 p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900">Envelope #{envelope.id}</p>
+                      <p className="text-xs text-gray-500">
+                        {new Date(envelope.createdAt).toLocaleString()} · Provider {envelope.provider}
+                      </p>
+                    </div>
+                    <span className="rounded-full bg-gray-100 px-2 py-1 text-xs font-semibold text-gray-700">
+                      {participant?.status ?? envelope.status}
+                    </span>
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-xs text-gray-500">Status: {envelope.status}</p>
+                    {!isComplete && (
+                      <button
+                        type="button"
+                        className="rounded bg-indigo-600 px-3 py-1 text-xs font-semibold text-white disabled:bg-indigo-300"
+                        onClick={() => launchSigningSession(envelope.id)}
+                        disabled={signingStatus.loading}
+                      >
+                        {signingStatus.loading ? 'Launching…' : 'Launch Signing Session'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </section>
 
       <section className="space-y-4 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">

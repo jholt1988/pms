@@ -41,6 +41,13 @@ export class LeaseService {
       orderBy: { sentAt: 'desc' },
       take: 10,
     },
+    esignEnvelopes: {
+      include: {
+        participants: true,
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 5,
+    },
   };
 
   async createLease(dto: CreateLeaseDto) {
