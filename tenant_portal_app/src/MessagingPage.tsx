@@ -1,6 +1,8 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from './AuthContext';
+import BulkMessageComposer from './components/messages/BulkMessageComposer';
+import BulkMessageStatusPanel from './components/messages/BulkMessageStatusPanel';
 
 const formatDateTime = (value?: string | null): string => {
   if (!value) {
@@ -25,7 +27,12 @@ const MessagingPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const [bulkError, setBulkError] = useState<string | null>(null);
+  const [bulkBatches, setBulkBatches] = useState<any[]>([]);
+  const [templates, setTemplates] = useState<any[]>([]);
+  const [bulkLoading, setBulkLoading] = useState(false);
   const { token, user } = useAuth();
+  const isPropertyManager = (user as { role?: string } | null)?.role === 'PROPERTY_MANAGER';
   const currentUserName = (user as { username?: string; name?: string } | null)?.username
     ?? (user as { username?: string; name?: string } | null)?.name
     ?? '';
@@ -87,6 +94,48 @@ const MessagingPage = () => {
       fetchConversations();
     }
   }, [token, fetchMessages]);
+
+  const fetchBulkResources = useCallback(async () => {
+    if (!token || !isPropertyManager) {
+      return;
+    }
+    setBulkLoading(true);
+    setBulkError(null);
+    try {
+      const [batchesResponse, templatesResponse] = await Promise.all([
+        fetch('/api/messaging/bulk', {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch('/api/messaging/templates', {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
+
+      if (!batchesResponse.ok) {
+        throw new Error('Failed to load bulk message batches');
+      }
+      if (!templatesResponse.ok) {
+        throw new Error('Failed to load templates');
+      }
+
+      const [batchesData, templatesData] = await Promise.all([
+        batchesResponse.json(),
+        templatesResponse.json(),
+      ]);
+      setBulkBatches(Array.isArray(batchesData) ? batchesData : []);
+      setTemplates(Array.isArray(templatesData) ? templatesData : []);
+    } catch (fetchError: any) {
+      setBulkError(fetchError.message);
+    } finally {
+      setBulkLoading(false);
+    }
+  }, [isPropertyManager, token]);
+
+  useEffect(() => {
+    if (token && isPropertyManager) {
+      fetchBulkResources();
+    }
+  }, [token, isPropertyManager, fetchBulkResources]);
 
   const handleConversationClick = (conversation: any) => {
     setSelectedConversation(conversation);
@@ -286,6 +335,34 @@ const MessagingPage = () => {
           )}
         </section>
       </div>
+
+      {isPropertyManager && token && (
+        <section className="space-y-4 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+          <header className="space-y-1">
+            <h2 className="text-xl font-semibold text-gray-900">Bulk messaging</h2>
+            <p className="text-sm text-gray-500">
+              Send targeted announcements with merge-field personalization and track delivery results in real time.
+            </p>
+          </header>
+
+          {bulkError && (
+            <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">{bulkError}</div>
+          )}
+
+          {bulkLoading ? (
+            <p className="text-sm text-gray-500">Loading bulk messaging tools…</p>
+          ) : (
+            <div className="space-y-4">
+              <BulkMessageComposer
+                token={token}
+                templates={templates}
+                onBatchCreated={fetchBulkResources}
+              />
+              <BulkMessageStatusPanel token={token} batches={bulkBatches} onRefresh={fetchBulkResources} />
+            </div>
+          )}
+        </section>
+      )}
     </div>
   );
 };
