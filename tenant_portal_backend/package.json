@@ -6,6 +6,8 @@
   "scripts": {
     "start": "ts-node --transpile-only src/index.ts",
     "start:check": "ts-node src/index.ts",
+    "seed:check": "ts-node scripts/check-seed-coverage.ts",
+    "seed:missing": "ts-node scripts/seed-missing.ts",
     "build": "tsc",
     "db:seed": "ts-node prisma/seed.ts",
     "test": "jest",

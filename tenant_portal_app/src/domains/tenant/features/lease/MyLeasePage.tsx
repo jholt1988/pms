@@ -1,7 +1,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../../../AuthContext';
-import { createRecipientView, EsignEnvelope } from '../../../services/EsignatureApi';
+import { createRecipientView, EsignEnvelope, EsignParticipant } from '../../../../services/EsignatureApi';
 
 type LeaseStatus =
   | 'DRAFT'
@@ -491,7 +491,8 @@ const MyLeasePage: React.FC = () => {
           <div className="space-y-3">
             {lease?.esignEnvelopes?.map((envelope) => {
               const participant = envelope.participants?.find(
-                (p) => p.userId === lease?.tenant?.id || p.email === lease?.tenant?.username,
+                (participant: EsignParticipant) =>
+                  participant.userId === lease?.tenant?.id || participant.email === lease?.tenant?.username,
               );
               const isComplete = envelope.status === 'COMPLETED' || participant?.status === 'SIGNED';
               return (

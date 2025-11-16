@@ -8,6 +8,7 @@ import {
   ScanLine, 
   Shield,
   Calendar,
+  DollarSign,
   Users,
   Building2,
   LayoutDashboard,
@@ -41,7 +42,8 @@ interface NavLink {
 
 const mainNavigationLinks: NavLink[] = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['TENANT', 'PROPERTY_MANAGER', 'ADMIN'], showChevron: true },
-  { path: '/maintenance', label: 'Maintenance', icon: Wrench, roles: ['TENANT', 'PROPERTY_MANAGER', 'ADMIN'], showChevron: true },
+  { path: '/maintenance', label: 'Maintenance', icon: Wrench, roles: ['TENANT'], showChevron: true },
+  { path: '/maintenance-management', label: 'Maintenance', icon: Wrench, roles: ['PROPERTY_MANAGER', 'ADMIN'], showChevron: true },
   { path: '/payments', label: 'Payments', icon: Wallet, roles: ['TENANT', 'PROPERTY_MANAGER', 'ADMIN'], showChevron: true },
   { path: '/messaging', label: 'Messages', icon: MessageSquare, roles: ['TENANT', 'PROPERTY_MANAGER', 'ADMIN'] },
   { path: '/lease-management', label: 'Leases', icon: FileSignature, roles: ['PROPERTY_MANAGER', 'ADMIN'] },
@@ -55,6 +57,7 @@ const toolsLinks: NavLink[] = [
   { path: '/expense-tracker', label: 'Expenses', icon: Wallet, roles: ['PROPERTY_MANAGER', 'ADMIN'] },
   { path: '/rent-estimator', label: 'Rent Estimator', icon: ScanLine, roles: ['PROPERTY_MANAGER', 'ADMIN'] },
   { path: '/rent-optimization', label: 'AI Rent Optimization', icon: TrendingUp, roles: ['PROPERTY_MANAGER', 'ADMIN'], showDot: true },
+  { path: '/quickbooks', label: 'QuickBooks', icon: DollarSign, roles: ['PROPERTY_MANAGER', 'ADMIN'] },
   { path: '/user-management', label: 'User Management', icon: Users, roles: ['ADMIN'] },
 ];
 

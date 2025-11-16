@@ -20,6 +20,8 @@ import PropertyManagementPage from './PropertyManagementPage';
 import SchedulePage from './SchedulePage';
 
 import InspectionManagementPage from './InspectionManagementPage';
+import MaintenanceManagementPage from './MaintenanceManagementPage';
+import QuickBooksPage from './QuickBooksPage';
 import { AppShell } from './components/ui/AppShell';
 import { RentOptimizationDashboard } from './domains/property-manager/features/rent-optimization/RentOptimizationDashboard';
 import { PropertySearchPage } from './pages/properties/PropertySearchPage';
@@ -182,6 +184,8 @@ export default function App({className}: {className: string}): React.ReactElemen
                 <Route path="documents" element={<DocumentManagementPage />} />
                 <Route path="reporting" element={<ReportingPage />} />
                 <Route path="inspection-management" element={<InspectionManagementPage />} />
+                <Route path="maintenance-management" element={<MaintenanceManagementPage />} />
+                <Route path="quickbooks" element={<QuickBooksPage />} />
               </Route>
 
               <Route element={<RequireRole allowedRoles={['TENANT']} />}>

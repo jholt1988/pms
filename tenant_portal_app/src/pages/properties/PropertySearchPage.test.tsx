@@ -17,12 +17,29 @@ jest.mock('@nextui-org/react', () => {
       {children}
     </button>
   );
-  const Input = React.forwardRef(({ ...props }: any, ref) => <input {...props} ref={ref} />);
-  const Select = ({ children, selectedKeys, isDisabled, onChange }: any) => (
-    <select disabled={isDisabled} value={selectedKeys ? Array.from(selectedKeys)[0] : undefined} onChange={onChange}>
-      {children}
-    </select>
-  );
+  const Input = React.forwardRef((props: React.InputHTMLAttributes<HTMLInputElement>, ref: React.ForwardedRef<HTMLInputElement>) => (
+    <input {...props} ref={ref} />
+  ));
+
+  type MockSelectProps = {
+    children: React.ReactNode;
+    selectedKeys?: Set<React.Key>;
+    isDisabled?: boolean;
+    onChange?: React.ChangeEventHandler<HTMLSelectElement>;
+  };
+
+  const Select = ({ children, selectedKeys, isDisabled, onChange }: MockSelectProps) => {
+    const selectedValue = selectedKeys ? Array.from(selectedKeys)[0] : undefined;
+    return (
+      <select
+        disabled={isDisabled}
+        value={selectedValue as string | number | readonly string[] | undefined}
+        onChange={onChange}
+      >
+        {children}
+      </select>
+    );
+  };
 
   const Chip = ({ children, onClose, onClick, 'data-testid': dataTestId }: any) => (
     <div data-testid={dataTestId} onClick={onClick}>

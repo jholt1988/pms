@@ -5,7 +5,7 @@ import { format } from 'date-fns';
 interface LeaseCardProps {
   lease: {
     id: number;
-    tenant: { username: string };
+    tenant?: { username: string };
     unit: {
       name: string;
       property?: { name: string } | null;
@@ -45,7 +45,7 @@ export const LeaseCard: React.FC<LeaseCardProps> = ({ lease, onManage }) => {
     <Card className="shadow-medium">
       <CardHeader className="flex-row items-center justify-between px-4 py-3">
         <div className="flex flex-col gap-1">
-          <h3 className="font-semibold text-foreground">{lease.tenant.username}</h3>
+          <h3 className="font-semibold text-foreground">{lease.tenant?.username ?? 'Tenant'}</h3>
           <p className="text-sm text-foreground-500">
             {lease.unit.property ? `${lease.unit.property.name} · ` : ''}{lease.unit.name}
           </p>

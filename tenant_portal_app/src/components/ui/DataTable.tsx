@@ -12,12 +12,14 @@ import {
   Chip,
   Spinner
 } from '@nextui-org/react';
+import { useViewportCategory } from '../../hooks/useViewportCategory';
 
 export interface DataTableColumn {
   key: string;
   label: string;
   sortable?: boolean;
   align?: 'start' | 'center' | 'end';
+  hideOnTablet?: boolean;
 }
 
 export interface DataTableProps {
@@ -30,6 +32,8 @@ export interface DataTableProps {
   headerActions?: React.ReactNode;
   className?: string;
   renderCell?: (item: Record<string, any>, columnKey: string) => React.ReactNode;
+  renderCard?: (item: Record<string, any>) => React.ReactNode;
+  renderAs?: 'table' | 'cards';
 }
 
 export const DataTable: React.FC<DataTableProps> = ({
@@ -42,60 +46,36 @@ export const DataTable: React.FC<DataTableProps> = ({
   headerActions,
   className = '',
   renderCell,
+  renderCard,
+  renderAs = 'table',
 }) => {
-  const defaultRenderCell = (item: Record<string, any>, columnKey: string) => {
+  const viewport = useViewportCategory();
+  const isMobile = viewport === 'mobile' || viewport === 'tablet-portrait';
+
+  const visibleColumns = isMobile
+    ? columns.filter((c) => !c.hideOnTablet)
+    : columns;
+
+  const defaultRenderCell = (item: Record<string, any>, columnKey: string): React.ReactNode => {
     const value = item[columnKey];
-    
-    // Handle status fields with Chip component
-    if (columnKey.toLowerCase().includes('status')) {
-      const statusColors: Record<string, 'success' | 'warning' | 'danger' | 'primary' | 'default'> = {
-        'active': 'success',
-        'completed': 'success',
-        'paid': 'success',
-        'settled': 'success',
-        'pending': 'warning',
-        'due': 'warning',
-        'processing': 'primary',
-        'overdue': 'danger',
-        'failed': 'danger',
-        'cancelled': 'danger',
-      };
-      
-      const color = statusColors[value?.toLowerCase()] || 'default';
-      
-      return (
-        <Chip
-          color={color}
-          size="sm"
-          variant="flat"
-        >
-          {value}
-        </Chip>
-      );
+
+    if (value === null || value === undefined || value === '') {
+      return <span className="text-foreground-500">—</span>;
     }
-    
-    // Handle currency formatting
-    if (columnKey.toLowerCase().includes('amount') || columnKey.toLowerCase().includes('price')) {
-      const numValue = typeof value === 'number' ? value : parseFloat(value);
-      if (!isNaN(numValue)) {
-        return new Intl.NumberFormat('en-US', {
-          style: 'currency',
-          currency: 'USD',
-        }).format(numValue);
-      }
+
+    if (Array.isArray(value)) {
+      return value.join(', ');
     }
-    
-    // Handle date formatting
-    if (columnKey.toLowerCase().includes('date')) {
-      if (value) {
-        const date = new Date(value);
-        if (!isNaN(date.getTime())) {
-          return date.toLocaleDateString();
-        }
-      }
+
+    if (typeof value === 'boolean') {
+      return value ? 'Yes' : 'No';
     }
-    
-    return value?.toString() || '—';
+
+    if (typeof value === 'object') {
+      return JSON.stringify(value);
+    }
+
+    return value;
   };
 
   const cellRenderer = renderCell || defaultRenderCell;
@@ -106,11 +86,11 @@ export const DataTable: React.FC<DataTableProps> = ({
       removeWrapper
       classNames={{
         th: 'bg-content2 text-foreground-600 font-medium text-tiny uppercase tracking-wide',
-        td: 'text-small',
+        td: `text-small ${isMobile ? 'py-4' : ''}`,
       }}
     >
       <TableHeader>
-        {columns.map((column) => (
+        {visibleColumns.map((column) => (
           <TableColumn 
             key={column.key}
             align={column.align || 'start'}
@@ -127,7 +107,7 @@ export const DataTable: React.FC<DataTableProps> = ({
       >
         {data.map((item, index) => (
           <TableRow key={item.id || index}>
-            {columns.map((column) => (
+            {visibleColumns.map((column) => (
               <TableCell key={column.key}>
                 {cellRenderer(item, column.key)}
               </TableCell>
@@ -137,6 +117,34 @@ export const DataTable: React.FC<DataTableProps> = ({
       </TableBody>
     </Table>
   );
+
+  const cardContent = (
+    <div className="space-y-4">
+      {loading ? (
+        <Spinner />
+      ) : data.length === 0 ? (
+        <p>{emptyContent}</p>
+      ) : (
+        data.map((item, index) =>
+          renderCard ? (
+            renderCard(item)
+          ) : (
+            <Card key={item.id || index}>
+              <CardBody>
+                {columns.map((column) => (
+                  <div key={column.key}>
+                    <strong>{column.label}:</strong> {cellRenderer(item, column.key)}
+                  </div>
+                ))}
+              </CardBody>
+            </Card>
+          ),
+        )
+      )}
+    </div>
+  );
+
+  const content = renderAs === 'cards' && isMobile ? cardContent : tableContent;
 
   if (title || subtitle || headerActions) {
     return (
@@ -151,7 +159,7 @@ export const DataTable: React.FC<DataTableProps> = ({
           </CardHeader>
         )}
         <CardBody className="pt-0">
-          {tableContent}
+          {content}
         </CardBody>
       </Card>
     );
@@ -159,7 +167,7 @@ export const DataTable: React.FC<DataTableProps> = ({
 
   return (
     <div className={className}>
-      {tableContent}
+      {content}
     </div>
   );
 };
