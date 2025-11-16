@@ -11,15 +11,24 @@ import {
   HttpStatus,
   ValidationPipe,
   UsePipes,
+  Query,
+  Delete,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { PropertyService } from './property.service';
 import { Roles } from '../auth/roles.decorator';
 import { Role } from '@prisma/client';
 import { RolesGuard } from '../auth/roles.guard';
-import { CreatePropertyDto, CreateUnitDto, UpdatePropertyMarketingDto } from './dto/property.dto';
+import {
+  CreatePropertyDto,
+  CreateUnitDto,
+  UpdatePropertyMarketingDto,
+  PropertySearchQueryDto,
+  SavePropertyFilterDto,
+} from './dto/property.dto';
+import { Request as ExpressRequest } from 'express';
 
-interface AuthenticatedRequest extends Request {
+interface AuthenticatedRequest extends ExpressRequest {
   user: {
     userId: number;
     role: Role;
@@ -27,7 +36,7 @@ interface AuthenticatedRequest extends Request {
 }
 
 @Controller('api/properties')
-@UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
+@UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }))
 export class PropertyController {
   constructor(private readonly propertyService: PropertyService) {}
 
@@ -60,6 +69,40 @@ export class PropertyController {
   @Get('public')
   getPublicProperties() {
     return this.propertyService.getAllProperties();
+  }
+
+  @Get('search')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(Role.PROPERTY_MANAGER)
+  searchProperties(@Query() query: PropertySearchQueryDto) {
+    return this.propertyService.searchProperties(query);
+  }
+
+  @Get('public/search')
+  getPublicSearch(@Query() query: PropertySearchQueryDto) {
+    return this.propertyService.searchProperties(query);
+  }
+
+  @Get('saved-filters')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(Role.PROPERTY_MANAGER)
+  getSavedFilters(@Request() req: AuthenticatedRequest) {
+    return this.propertyService.getSavedFilters(req.user.userId);
+  }
+
+  @Post('saved-filters')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(Role.PROPERTY_MANAGER)
+  saveFilter(@Body() dto: SavePropertyFilterDto, @Request() req: AuthenticatedRequest) {
+    return this.propertyService.savePropertyFilter(req.user.userId, dto);
+  }
+
+  @Delete('saved-filters/:id')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(Role.PROPERTY_MANAGER)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  deleteFilter(@Param('id', ParseIntPipe) id: number, @Request() req: AuthenticatedRequest) {
+    return this.propertyService.deleteSavedFilter(req.user.userId, id);
   }
 
   @Get(':id')
