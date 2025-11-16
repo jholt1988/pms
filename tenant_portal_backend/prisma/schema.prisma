@@ -65,12 +65,30 @@ model User {
   messageTemplates      MessageTemplate[]
   bulkMessageBatches    BulkMessageBatch[]
   bulkMessageRecipients BulkMessageRecipient[]
+  quickBooksConnections     QuickBooksConnection[]
+  savedPropertyFilters      SavedPropertyFilter[]
 }
 
 model Property {
   id                   Int                       @id @default(autoincrement())
   name                 String
   address              String
+  city                 String?
+  state                String?
+  zipCode              String?
+  country              String?                 @default("USA")
+  latitude             Float?
+  longitude            Float?
+  propertyType         String?
+  description          String?
+  bedrooms             Float?
+  bathrooms            Float?
+  minRent              Float?
+  maxRent              Float?
+  tags                 String[]                @default([])
+  yearBuilt            Int?
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
   units                Unit[]
   rentalApplications   RentalApplication[]
   expenses             Expense[]
@@ -86,6 +104,12 @@ model Property {
   amenities            PropertyAmenity[]
   syndicationQueue     SyndicationQueue[]
   syndicationErrors    SyndicationErrorLog[]
+
+  @@index([city, state])
+  @@index([propertyType])
+  @@index([bedrooms])
+  @@index([bathrooms])
+  @@index([minRent])
 }
 
 model PropertyMarketingProfile {
@@ -139,6 +163,21 @@ model PropertyAmenity {
   @@unique([propertyId, amenityId])
   @@index([propertyId])
   @@index([amenityId])
+}
+
+model SavedPropertyFilter {
+  id        Int      @id @default(autoincrement())
+  name      String
+  description String?
+  filters   Json
+  sortBy    String?
+  sortOrder String?
+  user      User     @relation(fields: [userId], references: [id])
+  userId    Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
 }
 
 model Unit {

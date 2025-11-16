@@ -22,6 +22,7 @@ import SchedulePage from './SchedulePage';
 import InspectionManagementPage from './InspectionManagementPage';
 import { AppShell } from './components/ui/AppShell';
 import { RentOptimizationDashboard } from './domains/property-manager/features/rent-optimization/RentOptimizationDashboard';
+import { PropertySearchPage } from './pages/properties/PropertySearchPage';
 
 // Shared domain imports
 import { LoginPage } from './domains/shared/auth/features/login';
@@ -169,6 +170,7 @@ export default function App({className}: {className: string}): React.ReactElemen
 
               <Route element={<RequireRole allowedRoles={['PROPERTY_MANAGER']} />}>
                 <Route path="properties" element={<PropertyManagementPage />} />
+                <Route path="properties/search" element={<PropertySearchPage />} />
                 <Route path="schedule" element={<SchedulePage />} />
                 <Route path="lease-management" element={<LeaseManagementPageModern />} />
                 <Route path="rental-applications-management" element={<RentalApplicationsManagementPage />} />

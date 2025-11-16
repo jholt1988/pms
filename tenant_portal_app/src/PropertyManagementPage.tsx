@@ -47,7 +47,7 @@ interface Property {
   city?: string;
   state?: string;
   zipCode?: string;
-  type?: string;
+  propertyType?: string;
   yearBuilt?: number;
   amenities?: PropertyAmenitySummary[];
   photos?: PropertyPhotoSummary[];
@@ -142,16 +142,16 @@ const PropertyManagementPage: React.FC = () => {
   const [pausing, setPausing] = useState(false);
 
   // Property form state
-  const [propertyForm, setPropertyForm] = useState({
-    name: '',
-    address: '',
-    city: '',
-    state: '',
-    zipCode: '',
-    type: '',
-    yearBuilt: '',
-    amenities: [] as string[],
-  });
+const [propertyForm, setPropertyForm] = useState({
+  name: '',
+  address: '',
+  city: '',
+  state: '',
+  zipCode: '',
+  propertyType: '',
+  yearBuilt: '',
+  amenities: [] as string[],
+});
 
   // Unit form state
   const [unitForm, setUnitForm] = useState({
@@ -484,7 +484,7 @@ const PropertyManagementPage: React.FC = () => {
           city: '',
           state: '',
           zipCode: '',
-          type: '',
+          propertyType: '',
           yearBuilt: '',
           amenities: [],
         });
@@ -608,8 +608,8 @@ const PropertyManagementPage: React.FC = () => {
                               {property.zipCode ? ` ${property.zipCode}` : ''}
                             </span>
                           </div>
-                          {property.type && (
-                            <Chip size="sm" variant="flat" className="mt-2">{property.type}</Chip>
+                          {property.propertyType && (
+                            <Chip size="sm" variant="flat" className="mt-2">{property.propertyType}</Chip>
                           )}
                           {property.marketingProfile && (
                             <Chip size="sm" color="secondary" variant="flat" className="mt-2">
@@ -929,8 +929,8 @@ const PropertyManagementPage: React.FC = () => {
                 <Input
                   label="Type"
                   placeholder="e.g., Apartment, Condo"
-                  value={propertyForm.type}
-                  onChange={(e) => setPropertyForm({ ...propertyForm, type: e.target.value })}
+                value={propertyForm.propertyType}
+                onChange={(e) => setPropertyForm({ ...propertyForm, propertyType: e.target.value })}
                 />
                 <Input
                   label="Year Built"
