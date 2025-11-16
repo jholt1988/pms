@@ -78,6 +78,64 @@ model Property {
   UnitInspection       UnitInspection[]
   repairEstimates      RepairEstimate[]
   scheduleEvents       ScheduleEvent[]
+  marketingProfile     PropertyMarketingProfile?
+  photos               PropertyPhoto[]
+  amenities            PropertyAmenity[]
+  syndicationQueue     SyndicationQueue[]
+  syndicationErrors    SyndicationErrorLog[]
+}
+
+model PropertyMarketingProfile {
+  id                   Int                        @id @default(autoincrement())
+  property             Property                   @relation(fields: [propertyId], references: [id])
+  propertyId           Int                        @unique
+  minRent              Float?
+  maxRent              Float?
+  availabilityStatus   PropertyAvailabilityStatus @default(AVAILABLE)
+  availableOn          DateTime?
+  marketingHeadline    String?
+  marketingDescription String?
+  rentRangeCurrency    String                     @default("USD")
+  isSyndicationEnabled Boolean                     @default(true)
+  lastSyncedAt         DateTime?
+  createdAt            DateTime                   @default(now())
+  updatedAt            DateTime                   @updatedAt
+}
+
+model PropertyPhoto {
+  id          Int       @id @default(autoincrement())
+  property    Property  @relation(fields: [propertyId], references: [id])
+  propertyId  Int
+  url         String
+  caption     String?
+  isPrimary   Boolean   @default(false)
+  displayOrder Int      @default(0)
+  createdAt   DateTime  @default(now())
+
+  @@index([propertyId])
+}
+
+model Amenity {
+  id          Int               @id @default(autoincrement())
+  key         String            @unique
+  label       String
+  description String?
+  category    String?
+  properties  PropertyAmenity[]
+}
+
+model PropertyAmenity {
+  id          Int       @id @default(autoincrement())
+  property    Property  @relation(fields: [propertyId], references: [id])
+  propertyId  Int
+  amenity     Amenity   @relation(fields: [amenityId], references: [id])
+  amenityId   Int
+  value       String?
+  isFeatured  Boolean   @default(false)
+
+  @@unique([propertyId, amenityId])
+  @@index([propertyId])
+  @@index([amenityId])
 }
 
 model Unit {
@@ -93,6 +151,68 @@ model Unit {
   inspections        UnitInspection[]
   repairEstimates    RepairEstimate[]
   scheduleEvents     ScheduleEvent[]
+}
+
+enum PropertyAvailabilityStatus {
+  AVAILABLE
+  LIMITED
+  WAITLISTED
+  COMING_SOON
+  UNAVAILABLE
+}
+
+enum SyndicationChannel {
+  ZILLOW
+  APARTMENTS_DOT_COM
+}
+
+enum SyndicationStatus {
+  PENDING
+  IN_PROGRESS
+  SUCCESS
+  FAILED
+  PAUSED
+}
+
+model SyndicationCredential {
+  id        Int                  @id @default(autoincrement())
+  channel   SyndicationChannel   @unique
+  config    Json
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+}
+
+model SyndicationQueue {
+  id            Int                @id @default(autoincrement())
+  property      Property           @relation(fields: [propertyId], references: [id])
+  propertyId    Int
+  channel       SyndicationChannel
+  payload       Json?
+  status        SyndicationStatus  @default(PENDING)
+  retryCount    Int                @default(0)
+  maxRetries    Int                @default(5)
+  lastError     String?
+  nextRunAt     DateTime?
+  lastAttemptAt DateTime?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  @@index([propertyId])
+  @@index([channel])
+  @@index([status])
+}
+
+model SyndicationErrorLog {
+  id          Int                @id @default(autoincrement())
+  property    Property           @relation(fields: [propertyId], references: [id])
+  propertyId  Int
+  channel     SyndicationChannel
+  error       String
+  context     Json?
+  occurredAt  DateTime           @default(now())
+
+  @@index([propertyId])
+  @@index([channel])
 }
 
 model Lease {

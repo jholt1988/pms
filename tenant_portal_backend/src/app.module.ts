@@ -29,6 +29,7 @@ import { EventScheduleModule } from './schedule/schedule.module';
 import { HealthModule } from './health/health.module';
 import { JobsModule } from './jobs/jobs.module';
 import { QuickBooksModule } from './quickbooks/quickbooks.module';
+import { ListingSyndicationModule } from './listing-syndication/listing-syndication.module';
 import { EsignatureModule } from './esignature/esignature.module';
 
 @Module({
@@ -76,6 +77,7 @@ import { EsignatureModule } from './esignature/esignature.module';
     // HealthModule, // Temporarily disabled due to TypeORM dependency conflict
     JobsModule,
     QuickBooksModule,
+    ListingSyndicationModule,
     EsignatureModule,
   ],
   controllers: [AppController],
