@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationType, Prisma } from '@prisma/client';
 import { EmailService } from '../email/email.service';
+import { SmsService } from './sms.service';
 
 @Injectable()
 export class NotificationsService {
@@ -10,6 +11,7 @@ export class NotificationsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly emailService: EmailService,
+    private readonly smsService: SmsService,
   ) {}
 
   async create(data: {
@@ -112,6 +114,47 @@ export class NotificationsService {
         userId, // Ensure user can only delete their own notifications
       },
     });
+  }
+
+  async sendSignatureAlert(data: {
+    event: 'REQUESTED' | 'COMPLETED';
+    envelopeId: number;
+    leaseId: number;
+    participantName: string;
+    userId?: number;
+    email?: string;
+    phone?: string;
+  }) {
+    const type = data.event === 'REQUESTED' ? NotificationType.ESIGNATURE_REQUESTED : NotificationType.ESIGNATURE_COMPLETED;
+    const title =
+      data.event === 'REQUESTED'
+        ? `Signature requested for lease #${data.leaseId}`
+        : `Lease #${data.leaseId} signed`;
+    const message =
+      data.event === 'REQUESTED'
+        ? `${data.participantName}, please review and sign the pending lease documents.`
+        : `${data.participantName}, the lease packet has been fully executed.`;
+
+    if (data.userId) {
+      await this.create({
+        userId: data.userId,
+        type,
+        title,
+        message,
+        metadata: { envelopeId: data.envelopeId, leaseId: data.leaseId },
+        sendEmail: true,
+      });
+    } else if (data.email) {
+      try {
+        await this.emailService.sendNotificationEmail(data.email, title, message);
+      } catch (error) {
+        this.logger.warn(`Failed to send signature email to ${data.email}: ${error}`);
+      }
+    }
+
+    if (data.phone) {
+      await this.smsService.sendSms(data.phone, `${title} - ${message}`);
+    }
   }
 }
 

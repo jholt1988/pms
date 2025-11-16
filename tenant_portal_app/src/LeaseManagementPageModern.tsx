@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from './AuthContext';
 import { StatsCard, PageHeader, PipelineColumn, LeaseCard } from './components/ui';
 import { Card, CardBody } from '@nextui-org/react';
+import { LeaseEsignPanel } from './components/leases/LeaseEsignPanel';
+import { EsignEnvelope } from './services/EsignatureApi';
 
 type LeaseStatus =
   | 'DRAFT'
@@ -36,6 +38,7 @@ interface Lease {
   renewalOffers?: any[];
   notices?: any[];
   history?: any[];
+  esignEnvelopes?: EsignEnvelope[];
 }
 
 const LIFECYCLE_COLUMNS: {
@@ -164,6 +167,16 @@ const LeaseManagementPageModern = () => {
     toggleExpanded(leaseId);
   };
 
+  const handleEnvelopeCreated = (leaseId: number, envelope: EsignEnvelope) => {
+    setLeases(prev =>
+      prev.map(existing =>
+        existing.id === leaseId
+          ? { ...existing, esignEnvelopes: [envelope, ...(existing.esignEnvelopes ?? [])] }
+          : existing,
+      ),
+    );
+  };
+
   if (!token) {
     return (
       <div className="p-4">
@@ -277,11 +290,11 @@ const LeaseManagementPageModern = () => {
                 
                 {/* Expanded lease details would go here */}
                 {expandedLeases.has(lease.id) && (
-                  <Card className="mt-2 border-primary-200">
-                    <CardBody>
-                      <div className="grid gap-4 md:grid-cols-2">
-                        <div>
-                          <h4 className="font-semibold text-foreground mb-2">Lease Details</h4>
+                    <Card className="mt-2 border-primary-200">
+                      <CardBody>
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <div>
+                            <h4 className="font-semibold text-foreground mb-2">Lease Details</h4>
                           <div className="space-y-1 text-sm">
                             <p><span className="font-medium">Start Date:</span> {new Date(lease.startDate).toLocaleDateString()}</p>
                             <p><span className="font-medium">End Date:</span> {new Date(lease.endDate).toLocaleDateString()}</p>
@@ -289,15 +302,24 @@ const LeaseManagementPageModern = () => {
                             <p><span className="font-medium">Deposit:</span> ${lease.depositAmount.toLocaleString()}</p>
                           </div>
                         </div>
-                        <div>
-                          <h4 className="font-semibold text-foreground mb-2">Actions</h4>
-                          <p className="text-sm text-foreground-500">
-                            Lease management actions will be available here based on the current status.
-                          </p>
+                          <div>
+                            <h4 className="font-semibold text-foreground mb-2">Actions</h4>
+                            <p className="text-sm text-foreground-500">
+                              Lease management actions will be available here based on the current status.
+                            </p>
+                            <LeaseEsignPanel
+                              token={token}
+                              leaseId={lease.id}
+                              tenantEmail={lease.tenant?.username}
+                              tenantName={lease.tenant?.username}
+                              tenantId={lease.tenant?.id}
+                              envelopes={lease.esignEnvelopes ?? []}
+                              onEnvelopeCreated={(envelope) => handleEnvelopeCreated(lease.id, envelope)}
+                            />
+                          </div>
                         </div>
-                      </div>
-                    </CardBody>
-                  </Card>
+                      </CardBody>
+                    </Card>
                 )}
               </div>
             ))}

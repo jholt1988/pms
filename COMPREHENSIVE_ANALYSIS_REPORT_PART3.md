@@ -59,7 +59,7 @@
 | **Leasing & Marketing** |
 | Online Applications | ✅ | ✅ | ✅ | ✅ |
 | Background Screening | ⚠️ Manual | ✅ Integrated | ✅ Integrated | ✅ Integrated |
-| Electronic Signatures | ❌ | ✅ | ✅ | ✅ |
+| Electronic Signatures | ✅ (DocuSign workflows) | ✅ | ✅ | ✅ |
 | Listing Syndication | ❌ | ✅ (Zillow, etc.) | ✅ | ✅ |
 | Lead Management | ✅ | ✅ | ✅ | ✅ |
 | Tour Scheduling | ✅ | ✅ | ✅ | ✅ |
@@ -75,7 +75,7 @@
 | **Communication** |
 | Tenant Messaging | ✅ | ✅ | ✅ | ✅ |
 | Bulk Email | ❌ | ✅ | ✅ | ✅ |
-| SMS Notifications | ❌ | ✅ | ✅ | ✅ |
+| SMS Notifications | ✅ (Lease + esign alerts) | ✅ | ✅ | ✅ |
 | Email Templates | ✅ | ✅ | ✅ | ✅ |
 | | | | | |
 | **Mobile** |
