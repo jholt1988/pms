@@ -34,6 +34,7 @@ export class ChatbotService {
   private config: ChatbotConfig;
   private sessions: Map<string, ChatSession>;
   private sessionCleanupInterval: NodeJS.Timeout | null;
+  private feedback: Map<string, 'positive' | 'negative'>;
 
   constructor(config: Partial<ChatbotConfig> = {}) {
     this.config = {
@@ -50,9 +51,20 @@ export class ChatbotService {
 
     this.sessions = new Map();
     this.sessionCleanupInterval = null;
+    this.feedback = new Map();
 
     // Start session cleanup timer
     this.startSessionCleanup();
+  }
+
+  /**
+   * Record user feedback for analytics.
+   */
+  recordFeedback(messageId: string, sentiment: 'positive' | 'negative') {
+    if (!messageId) {
+      throw new Error('Message ID is required for feedback');
+    }
+    this.feedback.set(messageId, sentiment);
   }
 
   /**
