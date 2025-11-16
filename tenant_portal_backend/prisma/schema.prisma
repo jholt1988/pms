@@ -56,17 +56,21 @@ model User {
   generatedEstimates        RepairEstimate[]            @relation("GeneratedEstimates")
   approvedEstimates         RepairEstimate[]            @relation("ApprovedEstimates")
   scheduleEvents            ScheduleEvent[]             @relation("ScheduleEventTenant")
-  
+
   // Stripe integration
-  stripeCustomerId          String?                     @unique
-  
+  stripeCustomerId String? @unique
+
   // QuickBooks integration
+  quickBooksConnections QuickBooksConnection[]
+  messageTemplates      MessageTemplate[]
+  bulkMessageBatches    BulkMessageBatch[]
+  bulkMessageRecipients BulkMessageRecipient[]
   quickBooksConnections     QuickBooksConnection[]
   savedPropertyFilters      SavedPropertyFilter[]
 }
 
 model Property {
-  id                   Int                    @id @default(autoincrement())
+  id                   Int                       @id @default(autoincrement())
   name                 String
   address              String
   city                 String?
@@ -119,21 +123,21 @@ model PropertyMarketingProfile {
   marketingHeadline    String?
   marketingDescription String?
   rentRangeCurrency    String                     @default("USD")
-  isSyndicationEnabled Boolean                     @default(true)
+  isSyndicationEnabled Boolean                    @default(true)
   lastSyncedAt         DateTime?
   createdAt            DateTime                   @default(now())
   updatedAt            DateTime                   @updatedAt
 }
 
 model PropertyPhoto {
-  id          Int       @id @default(autoincrement())
-  property    Property  @relation(fields: [propertyId], references: [id])
-  propertyId  Int
-  url         String
-  caption     String?
-  isPrimary   Boolean   @default(false)
+  id           Int      @id @default(autoincrement())
+  property     Property @relation(fields: [propertyId], references: [id])
+  propertyId   Int
+  url          String
+  caption      String?
+  isPrimary    Boolean  @default(false)
   displayOrder Int      @default(0)
-  createdAt   DateTime  @default(now())
+  createdAt    DateTime @default(now())
 
   @@index([propertyId])
 }
@@ -148,13 +152,13 @@ model Amenity {
 }
 
 model PropertyAmenity {
-  id          Int       @id @default(autoincrement())
-  property    Property  @relation(fields: [propertyId], references: [id])
-  propertyId  Int
-  amenity     Amenity   @relation(fields: [amenityId], references: [id])
-  amenityId   Int
-  value       String?
-  isFeatured  Boolean   @default(false)
+  id         Int      @id @default(autoincrement())
+  property   Property @relation(fields: [propertyId], references: [id])
+  propertyId Int
+  amenity    Amenity  @relation(fields: [amenityId], references: [id])
+  amenityId  Int
+  value      String?
+  isFeatured Boolean  @default(false)
 
   @@unique([propertyId, amenityId])
   @@index([propertyId])
@@ -213,11 +217,11 @@ enum SyndicationStatus {
 }
 
 model SyndicationCredential {
-  id        Int                  @id @default(autoincrement())
-  channel   SyndicationChannel   @unique
+  id        Int                @id @default(autoincrement())
+  channel   SyndicationChannel @unique
   config    Json
-  createdAt DateTime             @default(now())
-  updatedAt DateTime             @updatedAt
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
 }
 
 model SyndicationQueue {
@@ -241,13 +245,13 @@ model SyndicationQueue {
 }
 
 model SyndicationErrorLog {
-  id          Int                @id @default(autoincrement())
-  property    Property           @relation(fields: [propertyId], references: [id])
-  propertyId  Int
-  channel     SyndicationChannel
-  error       String
-  context     Json?
-  occurredAt  DateTime           @default(now())
+  id         Int                @id @default(autoincrement())
+  property   Property           @relation(fields: [propertyId], references: [id])
+  propertyId Int
+  channel    SyndicationChannel
+  error      String
+  context    Json?
+  occurredAt DateTime           @default(now())
 
   @@index([propertyId])
   @@index([channel])
@@ -300,35 +304,35 @@ model Lease {
 }
 
 model MaintenanceRequest {
-  id             Int                         @id @default(autoincrement())
-  title          String
-  description    String
-  status         Status                      @default(PENDING)
-  author         User                        @relation(fields: [authorId], references: [id])
-  authorId       Int
-  createdAt      DateTime                    @default(now())
-  updatedAt      DateTime                    @updatedAt
-  priority       MaintenancePriority         @default(MEDIUM)
-  responseDueAt  DateTime?
-  dueAt          DateTime?
-  acknowledgedAt DateTime?
-  completedAt    DateTime?
-  property       Property?                   @relation(fields: [propertyId], references: [id])
-  propertyId     Int?
-  unit           Unit?                       @relation(fields: [unitId], references: [id])
-  unitId         Int?
-  asset          MaintenanceAsset?           @relation("AssetRequests", fields: [assetId], references: [id])
-  assetId        Int?
-  assignee       Technician?                 @relation("TechnicianAssignments", fields: [assigneeId], references: [id])
-  assigneeId     Int?
-  slaPolicy      MaintenanceSlaPolicy?       @relation(fields: [slaPolicyId], references: [id])
-  slaPolicyId    Int?
-  lease          Lease?                      @relation(fields: [leaseId], references: [id])
-  leaseId        Int?
+  id              Int                         @id @default(autoincrement())
+  title           String
+  description     String
+  status          Status                      @default(PENDING)
+  author          User                        @relation(fields: [authorId], references: [id])
+  authorId        Int
+  createdAt       DateTime                    @default(now())
+  updatedAt       DateTime                    @updatedAt
+  priority        MaintenancePriority         @default(MEDIUM)
+  responseDueAt   DateTime?
+  dueAt           DateTime?
+  acknowledgedAt  DateTime?
+  completedAt     DateTime?
+  property        Property?                   @relation(fields: [propertyId], references: [id])
+  propertyId      Int?
+  unit            Unit?                       @relation(fields: [unitId], references: [id])
+  unitId          Int?
+  asset           MaintenanceAsset?           @relation("AssetRequests", fields: [assetId], references: [id])
+  assetId         Int?
+  assignee        Technician?                 @relation("TechnicianAssignments", fields: [assigneeId], references: [id])
+  assigneeId      Int?
+  slaPolicy       MaintenanceSlaPolicy?       @relation(fields: [slaPolicyId], references: [id])
+  slaPolicyId     Int?
+  lease           Lease?                      @relation(fields: [leaseId], references: [id])
+  leaseId         Int?
   repairEstimates RepairEstimate[]
-  history        MaintenanceRequestHistory[]
-  notes          MaintenanceNote[]
-  photos         MaintenancePhoto[]
+  history         MaintenanceRequestHistory[]
+  notes           MaintenanceNote[]
+  photos          MaintenancePhoto[]
 }
 
 model MaintenanceAsset {
@@ -466,24 +470,24 @@ model LeaseDocument {
 }
 
 model Document {
-  id           Int              @id @default(autoincrement())
-  fileName     String
-  filePath     String
-  category     DocumentCategory
-  description  String?
-  mimeType     String?
-  size         Int?
-  uploadedBy   User             @relation(fields: [uploadedById], references: [id])
-  uploadedById Int
-  lease        Lease?           @relation(fields: [leaseId], references: [id])
-  leaseId      Int?
-  property     Property?        @relation(fields: [propertyId], references: [id])
-  propertyId   Int?
-  sharedWith   User[]           @relation("DocumentShares")
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
-  esignSignedEnvelope EsignEnvelope? @relation("EsignEnvelopeSignedPdf")
-  esignAuditEnvelope  EsignEnvelope? @relation("EsignEnvelopeAuditPdf")
+  id                  Int              @id @default(autoincrement())
+  fileName            String
+  filePath            String
+  category            DocumentCategory
+  description         String?
+  mimeType            String?
+  size                Int?
+  uploadedBy          User             @relation(fields: [uploadedById], references: [id])
+  uploadedById        Int
+  lease               Lease?           @relation(fields: [leaseId], references: [id])
+  leaseId             Int?
+  property            Property?        @relation(fields: [propertyId], references: [id])
+  propertyId          Int?
+  sharedWith          User[]           @relation("DocumentShares")
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+  esignSignedEnvelope EsignEnvelope?   @relation("EsignEnvelopeSignedPdf")
+  esignAuditEnvelope  EsignEnvelope?   @relation("EsignEnvelopeAuditPdf")
 
   @@index([uploadedById])
   @@index([leaseId])
@@ -492,44 +496,44 @@ model Document {
 }
 
 model EsignEnvelope {
-  id                    Int                     @id @default(autoincrement())
-  lease                 Lease                   @relation(fields: [leaseId], references: [id])
-  leaseId               Int
-  provider              EsignProvider           @default(DOCUSIGN)
-  providerEnvelopeId    String
-  status                EsignEnvelopeStatus     @default(CREATED)
-  providerStatus        String?
-  providerMetadata      Json?
-  signedPdfDocumentId   Int?                    @unique
-  auditTrailDocumentId  Int?                    @unique
-  signedPdfDocument     Document?               @relation("EsignEnvelopeSignedPdf", fields: [signedPdfDocumentId], references: [id])
-  auditTrailDocument    Document?               @relation("EsignEnvelopeAuditPdf", fields: [auditTrailDocumentId], references: [id])
-  participants          EsignParticipant[]
-  createdBy             User                    @relation("EnvelopeCreator", fields: [createdById], references: [id])
-  createdById           Int
-  createdAt             DateTime                @default(now())
-  updatedAt             DateTime                @updatedAt
+  id                   Int                 @id @default(autoincrement())
+  lease                Lease               @relation(fields: [leaseId], references: [id])
+  leaseId              Int
+  provider             EsignProvider       @default(DOCUSIGN)
+  providerEnvelopeId   String
+  status               EsignEnvelopeStatus @default(CREATED)
+  providerStatus       String?
+  providerMetadata     Json?
+  signedPdfDocumentId  Int?                @unique
+  auditTrailDocumentId Int?                @unique
+  signedPdfDocument    Document?           @relation("EsignEnvelopeSignedPdf", fields: [signedPdfDocumentId], references: [id])
+  auditTrailDocument   Document?           @relation("EsignEnvelopeAuditPdf", fields: [auditTrailDocumentId], references: [id])
+  participants         EsignParticipant[]
+  createdBy            User                @relation("EnvelopeCreator", fields: [createdById], references: [id])
+  createdById          Int
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
 
   @@index([leaseId])
   @@index([providerEnvelopeId])
 }
 
 model EsignParticipant {
-  id           Int                      @id @default(autoincrement())
-  envelope     EsignEnvelope            @relation(fields: [envelopeId], references: [id])
+  id           Int                    @id @default(autoincrement())
+  envelope     EsignEnvelope          @relation(fields: [envelopeId], references: [id])
   envelopeId   Int
   name         String
   email        String
   phone        String?
   role         String
-  user         User?                    @relation("EsignParticipantUser", fields: [userId], references: [id])
+  user         User?                  @relation("EsignParticipantUser", fields: [userId], references: [id])
   userId       Int?
-  status       EsignParticipantStatus   @default(CREATED)
+  status       EsignParticipantStatus @default(CREATED)
   recipientId  String?
   recipientUrl String?
   metadata     Json?
-  createdAt    DateTime                 @default(now())
-  updatedAt    DateTime                 @updatedAt
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
 
   @@index([envelopeId])
   @@index([email])
@@ -655,13 +659,95 @@ model ConversationParticipant {
 }
 
 model Message {
-  id             Int          @id @default(autoincrement())
+  id             Int                   @id @default(autoincrement())
   content        String
-  sender         User         @relation("sentMessages", fields: [senderId], references: [id])
+  sender         User                  @relation("sentMessages", fields: [senderId], references: [id])
   senderId       Int
-  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  conversation   Conversation          @relation(fields: [conversationId], references: [id])
   conversationId Int
-  createdAt      DateTime     @default(now())
+  template       MessageTemplate?      @relation(fields: [templateId], references: [id])
+  templateId     Int?
+  metadata       Json?
+  bulkRecipient  BulkMessageRecipient?
+  createdAt      DateTime              @default(now())
+}
+
+model MessageTemplate {
+  id          Int                @id @default(autoincrement())
+  name        String
+  description String?
+  subject     String?
+  body        String
+  mergeFields String[]           @default([])
+  createdBy   User?              @relation(fields: [createdById], references: [id])
+  createdById Int?
+  batches     BulkMessageBatch[]
+  messages    Message[]
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+}
+
+model BulkMessageBatch {
+  id                Int                    @id @default(autoincrement())
+  title             String
+  body              String
+  status            BulkMessageStatus      @default(DRAFT)
+  sendStrategy      BulkSendStrategy       @default(IMMEDIATE)
+  scheduledAt       DateTime?
+  throttlePerMinute Int?                   @default(60)
+  maxRetries        Int                    @default(3)
+  filters           Json?
+  metadata          Json?
+  creator           User?                  @relation(fields: [creatorId], references: [id])
+  creatorId         Int?
+  template          MessageTemplate?       @relation(fields: [templateId], references: [id])
+  templateId        Int?
+  recipients        BulkMessageRecipient[]
+  startedAt         DateTime?
+  completedAt       DateTime?
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+}
+
+model BulkMessageRecipient {
+  id              Int                 @id @default(autoincrement())
+  batch           BulkMessageBatch    @relation(fields: [batchId], references: [id])
+  batchId         Int
+  user            User                @relation(fields: [userId], references: [id])
+  userId          Int
+  status          BulkRecipientStatus @default(PENDING)
+  attempts        Int                 @default(0)
+  lastAttemptAt   DateTime?
+  nextAttemptAt   DateTime?
+  message         Message?            @relation(fields: [messageId], references: [id])
+  messageId       Int?                @unique
+  errorMessage    String?
+  renderedContent String?
+  mergeVariables  Json?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+}
+
+enum BulkMessageStatus {
+  DRAFT
+  QUEUED
+  SENDING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum BulkRecipientStatus {
+  PENDING
+  SENDING
+  SENT
+  FAILED
+  SKIPPED
+}
+
+enum BulkSendStrategy {
+  IMMEDIATE
+  SCHEDULED
 }
 
 model RentalApplication {
@@ -991,34 +1077,34 @@ enum NotificationType {
 }
 
 model UnitInspection {
-  id                Int                   @id @default(autoincrement())
-  unit              Unit                  @relation(fields: [unitId], references: [id])
-  unitId            Int
-  property          Property              @relation(fields: [propertyId], references: [id])
-  propertyId        Int
-  lease             Lease?                @relation(fields: [leaseId], references: [id])
-  leaseId           Int?
-  type              InspectionType
-  status            InspectionStatus      @default(SCHEDULED)
-  scheduledDate     DateTime
-  completedDate     DateTime?
-  inspector         User?                 @relation("Inspector", fields: [inspectorId], references: [id])
-  inspectorId       Int?
-  tenant            User?                 @relation("InspectionTenant", fields: [tenantId], references: [id])
-  tenantId          Int?
-  createdBy         User                  @relation("CreatedBy", fields: [createdById], references: [id])
-  createdById       Int
-  notes             String?
-  generalNotes      String?
-  findings          Json?
-  reportGenerated   Boolean               @default(false)
-  reportPath        String?
-  photos            UnitInspectionPhoto[]
-  rooms             InspectionRoom[]
-  signatures        InspectionSignature[]
-  repairEstimates   RepairEstimate[]
-  createdAt         DateTime              @default(now())
-  updatedAt         DateTime              @updatedAt
+  id              Int                   @id @default(autoincrement())
+  unit            Unit                  @relation(fields: [unitId], references: [id])
+  unitId          Int
+  property        Property              @relation(fields: [propertyId], references: [id])
+  propertyId      Int
+  lease           Lease?                @relation(fields: [leaseId], references: [id])
+  leaseId         Int?
+  type            InspectionType
+  status          InspectionStatus      @default(SCHEDULED)
+  scheduledDate   DateTime
+  completedDate   DateTime?
+  inspector       User?                 @relation("Inspector", fields: [inspectorId], references: [id])
+  inspectorId     Int?
+  tenant          User?                 @relation("InspectionTenant", fields: [tenantId], references: [id])
+  tenantId        Int?
+  createdBy       User                  @relation("CreatedBy", fields: [createdById], references: [id])
+  createdById     Int
+  notes           String?
+  generalNotes    String?
+  findings        Json?
+  reportGenerated Boolean               @default(false)
+  reportPath      String?
+  photos          UnitInspectionPhoto[]
+  rooms           InspectionRoom[]
+  signatures      InspectionSignature[]
+  repairEstimates RepairEstimate[]
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
 
   @@index([unitId])
   @@index([propertyId])
@@ -1059,42 +1145,42 @@ enum InspectionStatus {
 }
 
 model InspectionRoom {
-  id           Int                      @id @default(autoincrement())
-  inspection   UnitInspection           @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
-  inspectionId Int
-  name         String
-  roomType     RoomType
+  id             Int                       @id @default(autoincrement())
+  inspection     UnitInspection            @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+  inspectionId   Int
+  name           String
+  roomType       RoomType
   checklistItems InspectionChecklistItem[]
-  
+
   @@index([inspectionId])
 }
 
 model InspectionChecklistItem {
-  id              Int                        @id @default(autoincrement())
-  room            InspectionRoom             @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  roomId          Int
-  category        String
-  itemName        String
-  condition       InspectionCondition?
-  notes           String?
-  estimatedAge    Int?                       // Age in years
-  requiresAction  Boolean                    @default(false)
-  photos          InspectionChecklistPhoto[]
-  subItems        InspectionChecklistSubItem[]
-  
+  id             Int                          @id @default(autoincrement())
+  room           InspectionRoom               @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  roomId         Int
+  category       String
+  itemName       String
+  condition      InspectionCondition?
+  notes          String?
+  estimatedAge   Int? // Age in years
+  requiresAction Boolean                      @default(false)
+  photos         InspectionChecklistPhoto[]
+  subItems       InspectionChecklistSubItem[]
+
   @@index([roomId])
   @@index([condition])
   @@index([requiresAction])
 }
 
 model InspectionChecklistSubItem {
-  id              Int                     @id @default(autoincrement())
-  parentItem      InspectionChecklistItem @relation(fields: [parentItemId], references: [id], onDelete: Cascade)
-  parentItemId    Int
-  name            String
-  condition       InspectionCondition?
-  estimatedAge    Int?
-  
+  id           Int                     @id @default(autoincrement())
+  parentItem   InspectionChecklistItem @relation(fields: [parentItemId], references: [id], onDelete: Cascade)
+  parentItemId Int
+  name         String
+  condition    InspectionCondition?
+  estimatedAge Int?
+
   @@index([parentItemId])
 }
 
@@ -1107,89 +1193,89 @@ model InspectionChecklistPhoto {
   url             String
   caption         String?
   createdAt       DateTime                @default(now())
-  
+
   @@index([checklistItemId])
 }
 
 model InspectionSignature {
-  id           Int            @id @default(autoincrement())
-  inspection   UnitInspection @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
-  inspectionId Int
-  user         User           @relation("InspectionSigner", fields: [userId], references: [id])
-  userId       Int
-  role         String
-  signatureData String        // Base64 encoded signature image
-  signedAt     DateTime       @default(now())
-  
+  id            Int            @id @default(autoincrement())
+  inspection    UnitInspection @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+  inspectionId  Int
+  user          User           @relation("InspectionSigner", fields: [userId], references: [id])
+  userId        Int
+  role          String
+  signatureData String // Base64 encoded signature image
+  signedAt      DateTime       @default(now())
+
   @@index([inspectionId])
   @@index([userId])
 }
 
 model RepairEstimate {
-  id                    Int                   @id @default(autoincrement())
-  inspection            UnitInspection?       @relation(fields: [inspectionId], references: [id])
-  inspectionId          Int?
-  maintenanceRequest    MaintenanceRequest?   @relation(fields: [maintenanceRequestId], references: [id])
-  maintenanceRequestId  Int?
-  property              Property?             @relation(fields: [propertyId], references: [id])
-  propertyId            Int?
-  unit                  Unit?                 @relation(fields: [unitId], references: [id])
-  unitId                Int?
-  
+  id                   Int                 @id @default(autoincrement())
+  inspection           UnitInspection?     @relation(fields: [inspectionId], references: [id])
+  inspectionId         Int?
+  maintenanceRequest   MaintenanceRequest? @relation(fields: [maintenanceRequestId], references: [id])
+  maintenanceRequestId Int?
+  property             Property?           @relation(fields: [propertyId], references: [id])
+  propertyId           Int?
+  unit                 Unit?               @relation(fields: [unitId], references: [id])
+  unitId               Int?
+
   // Estimate summary
-  totalLaborCost        Float
-  totalMaterialCost     Float
-  totalProjectCost      Float
-  itemsToRepair         Int
-  itemsToReplace        Int
-  
+  totalLaborCost    Float
+  totalMaterialCost Float
+  totalProjectCost  Float
+  itemsToRepair     Int
+  itemsToReplace    Int
+
   // Metadata
-  currency              String                @default("USD")
-  generatedAt           DateTime              @default(now())
-  generatedBy           User                  @relation("GeneratedEstimates", fields: [generatedById], references: [id])
-  generatedById         Int
-  status                EstimateStatus        @default(DRAFT)
-  approvedAt            DateTime?
-  approvedBy            User?                 @relation("ApprovedEstimates", fields: [approvedById], references: [id])
-  approvedById          Int?
-  
-  lineItems             RepairEstimateLineItem[]
-  
+  currency      String         @default("USD")
+  generatedAt   DateTime       @default(now())
+  generatedBy   User           @relation("GeneratedEstimates", fields: [generatedById], references: [id])
+  generatedById Int
+  status        EstimateStatus @default(DRAFT)
+  approvedAt    DateTime?
+  approvedBy    User?          @relation("ApprovedEstimates", fields: [approvedById], references: [id])
+  approvedById  Int?
+
+  lineItems RepairEstimateLineItem[]
+
   @@index([inspectionId])
   @@index([maintenanceRequestId])
   @@index([status])
 }
 
 model RepairEstimateLineItem {
-  id                    Int            @id @default(autoincrement())
-  estimate              RepairEstimate @relation(fields: [estimateId], references: [id], onDelete: Cascade)
-  estimateId            Int
-  
+  id         Int            @id @default(autoincrement())
+  estimate   RepairEstimate @relation(fields: [estimateId], references: [id], onDelete: Cascade)
+  estimateId Int
+
   // Item identification
-  itemDescription       String
-  location              String
-  category              String         // plumbing, electrical, HVAC, etc.
-  issueType             String         // repair, replace
-  
+  itemDescription String
+  location        String
+  category        String // plumbing, electrical, HVAC, etc.
+  issueType       String // repair, replace
+
   // Cost breakdown
-  laborHours            Float?
-  laborRate             Float?
-  laborCost             Float
-  materialCost          Float
-  totalCost             Float
-  
+  laborHours   Float?
+  laborRate    Float?
+  laborCost    Float
+  materialCost Float
+  totalCost    Float
+
   // Depreciation & condition
-  originalCost          Float?
-  depreciatedValue      Float?
-  depreciationRate      Float?
-  conditionAdjustment   Float?
-  estimatedLifetime     Int?           // Years
-  currentAge            Int?           // Years
-  
+  originalCost        Float?
+  depreciatedValue    Float?
+  depreciationRate    Float?
+  conditionAdjustment Float?
+  estimatedLifetime   Int? // Years
+  currentAge          Int? // Years
+
   // Additional details
-  repairInstructions    String?
-  notes                 String?
-  
+  repairInstructions String?
+  notes              String?
+
   @@index([estimateId])
   @@index([category])
 }
@@ -1268,19 +1354,19 @@ enum EventPriority {
 }
 
 model QuickBooksConnection {
-  id                      Int      @id @default(autoincrement())
-  userId                  Int
-  companyId               String
-  accessToken             String
-  refreshToken            String
-  tokenExpiresAt          DateTime
-  refreshTokenExpiresAt   DateTime
-  isActive                Boolean  @default(true)
-  createdAt               DateTime @default(now())
-  updatedAt               DateTime @updatedAt
-  
+  id                    Int      @id @default(autoincrement())
+  userId                Int
+  companyId             String
+  accessToken           String
+  refreshToken          String
+  tokenExpiresAt        DateTime
+  refreshTokenExpiresAt DateTime
+  isActive              Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   @@unique([userId, companyId])
   @@map("quickbooks_connections")
 }

@@ -13,11 +13,13 @@ import {
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { MessagingService } from './messaging.service';
+import { BulkMessagingService } from './bulk-messaging.service';
 import {
   CreateMessageDto,
   CreateConversationDto,
   GetConversationsQueryDto,
   GetMessagesQueryDto,
+  CreateBulkMessageDto,
 } from './dto/messaging.dto';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -34,7 +36,10 @@ interface AuthenticatedRequest extends Request {
 @Controller('api/messaging')
 @UseGuards(AuthGuard('jwt'))
 export class MessagingController {
-  constructor(private readonly messagingService: MessagingService) {}
+  constructor(
+    private readonly messagingService: MessagingService,
+    private readonly bulkMessagingService: BulkMessagingService,
+  ) {}
 
   /**
    * Get all conversations for the authenticated user
@@ -122,6 +127,83 @@ export class MessagingController {
   @Roles(Role.PROPERTY_MANAGER)
   async getAllUsers() {
     return this.messagingService.findAllUsers();
+  }
+
+  /**
+   * List available templates for bulk messaging
+   */
+  @Get('templates')
+  @UseGuards(RolesGuard)
+  @Roles(Role.PROPERTY_MANAGER)
+  async getTemplates() {
+    return this.bulkMessagingService.getTemplates();
+  }
+
+  /**
+   * Preview a bulk message before queuing it
+   */
+  @Post('bulk/preview')
+  @UseGuards(RolesGuard)
+  @Roles(Role.PROPERTY_MANAGER)
+  async previewBulk(
+    @Body() dto: CreateBulkMessageDto,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    return this.bulkMessagingService.previewBulkMessage(dto, req.user.userId);
+  }
+
+  /**
+   * Queue a bulk message for asynchronous delivery
+   */
+  @Post('bulk')
+  @HttpCode(HttpStatus.ACCEPTED)
+  @UseGuards(RolesGuard)
+  @Roles(Role.PROPERTY_MANAGER)
+  async queueBulk(
+    @Body() dto: CreateBulkMessageDto,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    return this.bulkMessagingService.queueBulkMessage(dto, req.user.userId);
+  }
+
+  /**
+   * Get all bulk message batches with delivery summaries
+   */
+  @Get('bulk')
+  @UseGuards(RolesGuard)
+  @Roles(Role.PROPERTY_MANAGER)
+  async listBulkBatches() {
+    return this.bulkMessagingService.listBatches();
+  }
+
+  /**
+   * Get metadata and delivery stats for a specific bulk batch
+   */
+  @Get('bulk/:id')
+  @UseGuards(RolesGuard)
+  @Roles(Role.PROPERTY_MANAGER)
+  async getBulkBatch(@Param('id', ParseIntPipe) id: number) {
+    return this.bulkMessagingService.getBatchById(id);
+  }
+
+  /**
+   * Get the per-recipient delivery statuses for a bulk batch
+   */
+  @Get('bulk/:id/recipients')
+  @UseGuards(RolesGuard)
+  @Roles(Role.PROPERTY_MANAGER)
+  async getBulkRecipients(@Param('id', ParseIntPipe) id: number) {
+    return this.bulkMessagingService.getRecipientStatuses(id);
+  }
+
+  /**
+   * Get summarized delivery report for a batch
+   */
+  @Get('bulk/:id/report')
+  @UseGuards(RolesGuard)
+  @Roles(Role.PROPERTY_MANAGER)
+  async getBulkReport(@Param('id', ParseIntPipe) id: number) {
+    return this.bulkMessagingService.getDeliveryReport(id);
   }
 
   /**
