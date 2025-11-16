@@ -17,7 +17,7 @@ import { PropertyService } from './property.service';
 import { Roles } from '../auth/roles.decorator';
 import { Role } from '@prisma/client';
 import { RolesGuard } from '../auth/roles.guard';
-import { CreatePropertyDto, CreateUnitDto } from './dto/property.dto';
+import { CreatePropertyDto, CreateUnitDto, UpdatePropertyMarketingDto } from './dto/property.dto';
 
 interface AuthenticatedRequest extends Request {
   user: {
@@ -67,5 +67,22 @@ export class PropertyController {
   @Roles(Role.PROPERTY_MANAGER)
   getPropertyById(@Param('id', ParseIntPipe) id: number) {
     return this.propertyService.getPropertyById(id);
+  }
+
+  @Get(':id/marketing')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(Role.PROPERTY_MANAGER)
+  getMarketingProfile(@Param('id', ParseIntPipe) id: number) {
+    return this.propertyService.getMarketingProfile(id);
+  }
+
+  @Post(':id/marketing')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(Role.PROPERTY_MANAGER)
+  updateMarketingProfile(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdatePropertyMarketingDto,
+  ) {
+    return this.propertyService.updateMarketingProfile(id, dto);
   }
 }
