@@ -15,20 +15,14 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { chatbotService } from '../domains/shared/ai-services/chatbot';
-
-interface Message {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: string;
-  confidence?: number;
-  suggestedActions?: Array<{
-    label: string;
-    action: string;
-    params?: Record<string, any>;
-  }>;
-  relatedQuestions?: string[];
-}
+import {
+  StreamingMessage,
+  SuggestedActions,
+  FeedbackControls,
+  type ChatMessageUI,
+  type SuggestedAction,
+  type FeedbackPayload,
+} from './chatbot';
 
 interface ChatWidgetProps {
   userId: string;
@@ -38,9 +32,10 @@ interface ChatWidgetProps {
 export function ChatWidget({ userId, className = '' }: ChatWidgetProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [sessionId, setSessionId] = useState<string | undefined>();
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<ChatMessageUI[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const streamingTimers = useRef<Record<string, ReturnType<typeof setInterval>>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Scroll to bottom when new messages arrive
@@ -52,7 +47,7 @@ export function ChatWidget({ userId, className = '' }: ChatWidgetProps) {
   useEffect(() => {
     if (isOpen && messages.length === 0) {
       // Show welcome message with popular FAQs
-      const welcomeMessage: Message = {
+      const welcomeMessage: ChatMessageUI = {
         id: 'welcome',
         role: 'assistant',
         content: 'Hi! I\'m your AI assistant. How can I help you today?',
@@ -63,10 +58,39 @@ export function ChatWidget({ userId, className = '' }: ChatWidgetProps) {
     }
   }, [isOpen, messages.length]);
 
+  useEffect(() => {
+    return () => {
+      Object.values(streamingTimers.current).forEach(timer => clearInterval(timer));
+      streamingTimers.current = {};
+    };
+  }, []);
+
+  const streamAssistantResponse = (message: ChatMessageUI, fullContent: string) => {
+    setMessages(prev => [...prev, message]);
+    const chunkSize = 28;
+    let index = 0;
+    const timer = setInterval(() => {
+      index = Math.min(fullContent.length, index + chunkSize);
+      const nextChunk = fullContent.slice(0, index);
+      setMessages(prevMessages =>
+        prevMessages.map(item =>
+          item.id === message.id
+            ? { ...item, content: nextChunk, streaming: index < fullContent.length }
+            : item
+        )
+      );
+      if (index >= fullContent.length) {
+        clearInterval(timer);
+        delete streamingTimers.current[message.id];
+      }
+    }, 40);
+    streamingTimers.current[message.id] = timer;
+  };
+
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
 
-    const userMessage: Message = {
+    const userMessage: ChatMessageUI = {
       id: `user-${Date.now()}`,
       role: 'user',
       content: input,
@@ -86,20 +110,21 @@ export function ChatWidget({ userId, className = '' }: ChatWidgetProps) {
 
       setSessionId(newSessionId);
 
-      const assistantMessage: Message = {
+      const assistantMessage: ChatMessageUI = {
         id: messageId,
         role: 'assistant',
-        content: response.message,
+        content: '',
         timestamp: new Date().toISOString(),
         confidence: response.confidence,
         suggestedActions: response.suggestedActions,
         relatedQuestions: response.relatedQuestions,
+        streaming: true,
       };
 
-      setMessages(prev => [...prev, assistantMessage]);
+      streamAssistantResponse(assistantMessage, response.message);
     } catch (error) {
       console.error('Chatbot error:', error);
-      const errorMessage: Message = {
+      const errorMessage: ChatMessageUI = {
         id: `error-${Date.now()}`,
         role: 'assistant',
         content: 'Sorry, I encountered an error. Please try again or contact property management.',
@@ -117,24 +142,40 @@ export function ChatWidget({ userId, className = '' }: ChatWidgetProps) {
     setTimeout(() => handleSend(), 100);
   };
 
-  const handleAction = (action: string, params?: Record<string, any>) => {
-    switch (action) {
+  const handleAction = (action: SuggestedAction) => {
+    switch (action.action) {
       case 'navigate':
-        if (params?.page) {
-          window.location.href = params.page;
+        if (action.params?.page) {
+          window.location.href = action.params.page as string;
         }
         break;
       case 'call':
-        if (params?.phone) {
-          window.location.href = `tel:${params.phone}`;
+        if (action.params?.phone) {
+          window.location.href = `tel:${action.params.phone}`;
         }
         break;
       default:
-        console.log('Unknown action:', action, params);
+        console.log('Unknown action:', action);
     }
   };
 
-  const renderMessage = (message: Message) => {
+  const handleFeedback = ({ messageId, sentiment }: FeedbackPayload) => {
+    setMessages(prev =>
+      prev.map(message =>
+        message.id === messageId ? { ...message, feedback: sentiment } : message
+      )
+    );
+    try {
+      chatbotService.recordFeedback(messageId, sentiment);
+    } catch (err) {
+      console.error('Unable to store feedback', err);
+    }
+  };
+
+  const renderMessage = (message: ChatMessageUI) => {
+    if (message.streaming) {
+      return <StreamingMessage key={message.id} message={message} />;
+    }
     const isUser = message.role === 'user';
 
     return (
@@ -165,56 +206,45 @@ export function ChatWidget({ userId, className = '' }: ChatWidgetProps) {
             </div>
           )}
 
-          {/* Suggested actions */}
-          {!isUser && message.suggestedActions && message.suggestedActions.length > 0 && (
-            <div style={{ marginTop: '12px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-              {message.suggestedActions.map((action, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => handleAction(action.action, action.params)}
-                  style={{
-                    padding: '6px 12px',
-                    fontSize: '13px',
-                    border: '1px solid #007bff',
-                    borderRadius: '6px',
-                    backgroundColor: 'white',
-                    color: '#007bff',
-                    cursor: 'pointer',
-                  }}
-                >
-                  {action.label}
-                </button>
-              ))}
-            </div>
-          )}
+          {!isUser && (
+            <>
+              <SuggestedActions actions={message.suggestedActions} onAction={handleAction} />
 
-          {/* Related questions */}
-          {!isUser && message.relatedQuestions && message.relatedQuestions.length > 0 && (
-            <div style={{ marginTop: '12px' }}>
-              <div style={{ fontSize: '12px', marginBottom: '6px', fontWeight: 'bold' }}>
-                Related questions:
-              </div>
-              {message.relatedQuestions.map((question, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => handleQuickQuestion(question)}
-                  style={{
-                    display: 'block',
-                    width: '100%',
-                    textAlign: 'left',
-                    padding: '6px 0',
-                    fontSize: '13px',
-                    background: 'none',
-                    border: 'none',
-                    color: '#007bff',
-                    cursor: 'pointer',
-                    textDecoration: 'underline',
-                  }}
-                >
-                  {question}
-                </button>
-              ))}
-            </div>
+              {/* Related questions */}
+              {message.relatedQuestions && message.relatedQuestions.length > 0 && (
+                <div style={{ marginTop: '12px' }}>
+                  <div style={{ fontSize: '12px', marginBottom: '6px', fontWeight: 'bold' }}>
+                    Related questions:
+                  </div>
+                  {message.relatedQuestions.map((question, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => handleQuickQuestion(question)}
+                      style={{
+                        display: 'block',
+                        width: '100%',
+                        textAlign: 'left',
+                        padding: '6px 0',
+                        fontSize: '13px',
+                        background: 'none',
+                        border: 'none',
+                        color: '#007bff',
+                        cursor: 'pointer',
+                        textDecoration: 'underline',
+                      }}
+                    >
+                      {question}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <FeedbackControls
+                messageId={message.id}
+                value={message.feedback}
+                onFeedback={handleFeedback}
+              />
+            </>
           )}
         </div>
       </div>

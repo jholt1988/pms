@@ -59,6 +59,38 @@ export class DocumentsService {
     return document;
   }
 
+  async saveBuffer(
+    buffer: Buffer,
+    params: {
+      fileName: string;
+      userId: number;
+      category: DocumentCategory;
+      description?: string;
+      leaseId?: number;
+      propertyId?: number;
+      mimeType?: string;
+    },
+  ) {
+    const fileExt = path.extname(params.fileName) || '.pdf';
+    const fileName = `${randomBytes(16).toString('hex')}${fileExt}`;
+    const filePath = path.join(this.uploadDir, fileName);
+
+    await fs.writeFile(filePath, buffer);
+
+    return this.prisma.document.create({
+      data: {
+        fileName: params.fileName,
+        filePath: fileName,
+        category: params.category,
+        description: params.description,
+        mimeType: params.mimeType ?? 'application/pdf',
+        uploadedBy: { connect: { id: params.userId } },
+        ...(params.leaseId && { lease: { connect: { id: params.leaseId } } }),
+        ...(params.propertyId && { property: { connect: { id: params.propertyId } } }),
+      },
+    });
+  }
+
   async getFileStream(documentId: number, userId: number) {
     const document = await this.prisma.document.findFirst({
       where: {

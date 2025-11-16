@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { LeaseStatus } from '@prisma/client';
+import { LeaseStatus, SyndicationChannel } from '@prisma/client';
 
 @Injectable()
 export class ReportingService {
@@ -291,6 +291,22 @@ export class ReportingService {
       property: payment.lease?.unit.property.name || 'Unknown',
       unit: payment.lease?.unit.name || 'Unknown',
     }));
+  }
+
+  async logSyndicationError(input: {
+    propertyId: number;
+    channel: SyndicationChannel;
+    error: string;
+    context?: unknown;
+  }) {
+    await this.prisma.syndicationErrorLog.create({
+      data: {
+        propertyId: input.propertyId,
+        channel: input.channel,
+        error: input.error,
+        context: input.context ? (input.context as object) : undefined,
+      },
+    });
   }
 }
 
