@@ -45,6 +45,8 @@ model User {
   notifications             Notification[]
   documents                 Document[]
   sharedDocuments           Document[]                  @relation("DocumentShares")
+  createdEsignEnvelopes     EsignEnvelope[]             @relation("EnvelopeCreator")
+  esignParticipantRecords   EsignParticipant[]          @relation("EsignParticipantUser")
   inspections               UnitInspection[]            @relation("Inspector")
   tenantInspections         UnitInspection[]            @relation("InspectionTenant")
   createdInspections        UnitInspection[]            @relation("CreatedBy")
@@ -253,6 +255,7 @@ model Lease {
   notices                   LeaseNotice[]
   maintenanceRequests       MaintenanceRequest[]
   inspections               UnitInspection[]
+  esignEnvelopes            EsignEnvelope[]
 
   @@index([status])
   @@index([endDate])
@@ -441,11 +444,81 @@ model Document {
   sharedWith   User[]           @relation("DocumentShares")
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
+  esignSignedEnvelope EsignEnvelope? @relation("EsignEnvelopeSignedPdf")
+  esignAuditEnvelope  EsignEnvelope? @relation("EsignEnvelopeAuditPdf")
 
   @@index([uploadedById])
   @@index([leaseId])
   @@index([propertyId])
   @@index([category])
+}
+
+model EsignEnvelope {
+  id                    Int                     @id @default(autoincrement())
+  lease                 Lease                   @relation(fields: [leaseId], references: [id])
+  leaseId               Int
+  provider              EsignProvider           @default(DOCUSIGN)
+  providerEnvelopeId    String
+  status                EsignEnvelopeStatus     @default(CREATED)
+  providerStatus        String?
+  providerMetadata      Json?
+  signedPdfDocumentId   Int?                    @unique
+  auditTrailDocumentId  Int?                    @unique
+  signedPdfDocument     Document?               @relation("EsignEnvelopeSignedPdf", fields: [signedPdfDocumentId], references: [id])
+  auditTrailDocument    Document?               @relation("EsignEnvelopeAuditPdf", fields: [auditTrailDocumentId], references: [id])
+  participants          EsignParticipant[]
+  createdBy             User                    @relation("EnvelopeCreator", fields: [createdById], references: [id])
+  createdById           Int
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+
+  @@index([leaseId])
+  @@index([providerEnvelopeId])
+}
+
+model EsignParticipant {
+  id           Int                      @id @default(autoincrement())
+  envelope     EsignEnvelope            @relation(fields: [envelopeId], references: [id])
+  envelopeId   Int
+  name         String
+  email        String
+  phone        String?
+  role         String
+  user         User?                    @relation("EsignParticipantUser", fields: [userId], references: [id])
+  userId       Int?
+  status       EsignParticipantStatus   @default(CREATED)
+  recipientId  String?
+  recipientUrl String?
+  metadata     Json?
+  createdAt    DateTime                 @default(now())
+  updatedAt    DateTime                 @updatedAt
+
+  @@index([envelopeId])
+  @@index([email])
+}
+
+enum EsignProvider {
+  DOCUSIGN
+  HELLOSIGN
+}
+
+enum EsignEnvelopeStatus {
+  CREATED
+  SENT
+  DELIVERED
+  COMPLETED
+  DECLINED
+  VOIDED
+  ERROR
+}
+
+enum EsignParticipantStatus {
+  CREATED
+  SENT
+  VIEWED
+  SIGNED
+  DECLINED
+  ERROR
 }
 
 enum DocumentCategory {
@@ -875,6 +948,8 @@ enum NotificationType {
   SYSTEM_ANNOUNCEMENT
   INSPECTION_SCHEDULED
   INSPECTION_COMPLETED
+  ESIGNATURE_REQUESTED
+  ESIGNATURE_COMPLETED
 }
 
 model UnitInspection {

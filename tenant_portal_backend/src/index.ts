@@ -68,6 +68,7 @@ async function bootstrap() {
       .addTag('messaging', 'Tenant-manager communication')
       .addTag('documents', 'Document management and storage')
       .addTag('inspections', 'Property inspections and reports')
+      .addTag('esignature', 'Lease signing and envelope automation')
       .addTag('ai', 'AI-powered features (rent optimization, chatbot)')
       .addTag('reporting', 'Analytics and reporting')
       .addTag('health', 'System health and monitoring')

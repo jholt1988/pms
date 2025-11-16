@@ -30,6 +30,7 @@ import { HealthModule } from './health/health.module';
 import { JobsModule } from './jobs/jobs.module';
 import { QuickBooksModule } from './quickbooks/quickbooks.module';
 import { ListingSyndicationModule } from './listing-syndication/listing-syndication.module';
+import { EsignatureModule } from './esignature/esignature.module';
 
 @Module({
   imports: [
@@ -77,6 +78,7 @@ import { ListingSyndicationModule } from './listing-syndication/listing-syndicat
     JobsModule,
     QuickBooksModule,
     ListingSyndicationModule,
+    EsignatureModule,
   ],
   controllers: [AppController],
   providers: [
