@@ -62,6 +62,12 @@ export class TestDataFactory {
       city: testData.city(),
       state: testData.state(),
       zipCode: testData.zipCode(),
+      propertyType: ['Apartment', 'Townhome', 'Condo'][testData.getUniqueId() % 3],
+      minRent: testData.amount(1200, 2500),
+      maxRent: testData.amount(2500, 4000),
+      bedrooms: 1 + (testData.getUniqueId() % 3),
+      bathrooms: 1 + (testData.getUniqueId() % 2) * 0.5,
+      tags: ['pet-friendly', 'downtown', 'gym'].slice(0, (testData.getUniqueId() % 3) + 1),
       ...overrides,
     };
   }
