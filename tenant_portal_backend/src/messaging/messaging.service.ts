@@ -63,6 +63,42 @@ export class MessagingService {
   }
 
   /**
+   * Get a single conversation by ID
+   */
+  async getConversationById(conversationId: number, userId: number) {
+    await this.ensureConversationParticipant(conversationId, userId);
+
+    return this.prisma.conversation.findUnique({
+      where: { id: conversationId },
+      include: {
+        participants: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                username: true,
+                role: true,
+              },
+            },
+          },
+        },
+        messages: {
+          include: {
+            sender: {
+              select: {
+                id: true,
+                username: true,
+                role: true,
+              },
+            },
+          },
+          orderBy: { createdAt: 'asc' },
+        },
+      },
+    });
+  }
+
+  /**
    * Get messages in a conversation with pagination
    */
   async getConversationMessages(conversationId: number, userId: number, query?: GetMessagesQueryDto) {

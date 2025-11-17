@@ -24,7 +24,8 @@ export class AuthController {
 
   @Post('register')
   async register(@Body() registerDto: RegisterRequestDto) {
-    return this.authService.register(registerDto);
+    const result = await this.authService.register(registerDto);
+    return { user: result };
   }
 
   @Get('password-policy')

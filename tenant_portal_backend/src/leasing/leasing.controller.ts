@@ -17,7 +17,7 @@ import {
 } from '@nestjs/common';
 import { LeasingService } from './leasing.service';
 
-@Controller('leasing')
+@Controller(['api/leasing', 'leasing'])
 export class LeasingController {
   constructor(private readonly leasingService: LeasingService) {}
 

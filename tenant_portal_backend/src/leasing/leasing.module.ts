@@ -12,6 +12,7 @@ import { ToursController } from './tours.controller';
 import { ToursService } from './tours.service';
 import { LeadApplicationsController } from './lead-applications.controller';
 import { LeadApplicationsService } from './lead-applications.service';
+import { LeadsLegacyController } from '../legacy/leads-legacy.controller';
 
 @Module({
   imports: [EmailModule],
@@ -19,6 +20,7 @@ import { LeadApplicationsService } from './lead-applications.service';
     LeasingController,
     ToursController,
     LeadApplicationsController,
+    LeadsLegacyController,
   ],
   providers: [
     PrismaService,

@@ -198,7 +198,7 @@ const MaintenanceDashboardModern = () => {
     if (!token || !canManageRequests) return;
 
     try {
-      const response = await fetch('/api/users/technicians', {
+      const response = await fetch('/maintenance/technicians', {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (response.ok) {
@@ -267,7 +267,7 @@ const MaintenanceDashboardModern = () => {
     if (!token) return;
 
     try {
-      const response = await fetch(`/api/maintenance/${requestId}/assignee`, {
+      const response = await fetch(`/api/maintenance/${requestId}/assign`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,

@@ -58,7 +58,36 @@ export class RentOptimizationService {
   private readonly ML_SERVICE_URL = process.env.ML_SERVICE_URL || 'http://localhost:8000';
   private readonly USE_ML_SERVICE = process.env.USE_ML_SERVICE === 'true';
   
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) {
+    this.logger.log(`RentOptimizationService initialized. ML Service URL: ${this.ML_SERVICE_URL}, USE_ML_SERVICE: ${this.USE_ML_SERVICE}`);
+  }
+
+  async createRecommendation(data: MLPredictionResponse) {
+    const { unit_id, recommended_rent, confidence_interval_low, confidence_interval_high, factors, market_comparables, model_version, reasoning } = data;
+
+    const unitId = parseInt(unit_id, 10);
+    const unit = await this.prisma.unit.findUnique({ where: { id: unitId } });
+
+    if (!unit) {
+      throw new NotFoundException(`Unit with ID ${unitId} not found`);
+    }
+    
+    // Create the rent recommendation
+    return this.prisma.rentRecommendation.create({
+      data: {
+        unitId: unit.id,
+        currentRent: unit.lease?.rentAmount || 0,
+        recommendedRent: recommended_rent,
+        confidenceIntervalLow: confidence_interval_low,
+        confidenceIntervalHigh: confidence_interval_high,
+        factors,
+        marketComparables: market_comparables,
+        modelVersion: model_version,
+        reasoning,
+        status: RentRecommendationStatus.PENDING,
+      },
+    });
+  }
 
   async getAllRecommendations() {
     return this.prisma.rentRecommendation.findMany({
@@ -184,10 +213,11 @@ export class RentOptimizationService {
       } else {
         predictionData = this.generateMockRecommendation(unit);
       }
-
+        
       // Create recommendation in database
       const recommendation = await this.prisma.rentRecommendation.create({
         data: {
+          id: `${unitId}-${Date.now().toString()}`, // Unique ID
           unitId,
           currentRent: unit.lease?.rentAmount || 0,
           recommendedRent: predictionData.recommendedRent,
@@ -398,11 +428,13 @@ export class RentOptimizationService {
 
     const avgConfidence = 0; // Removed confidenceScore field
 
-    const avgIncrease = recommendations.length > 0
-      ? recommendations.reduce((sum: number, r: any) => {
+    // Filter out recommendations with currentRent === 0 to avoid division by zero
+    const validIncreaseRecs = recommendations.filter(r => r.currentRent !== 0);
+    const avgIncrease = validIncreaseRecs.length > 0
+      ? validIncreaseRecs.reduce((sum: number, r: any) => {
           const increase = ((r.recommendedRent - r.currentRent) / r.currentRent) * 100;
           return sum + increase;
-        }, 0) / recommendations.length
+        }, 0) / validIncreaseRecs.length
       : 0;
 
     const totalPotentialIncrease = recommendations.reduce(
@@ -742,28 +774,27 @@ export class RentOptimizationService {
       factors: [
         {
           name: 'Market Trend',
-          impact: (increase * 50).toFixed(1),
+          impact_percentage: increase * 50,
           description: `Local market rents increased ${(increase * 100).toFixed(1)}% recently`,
         },
         {
           name: 'Seasonal Demand',
-          impact: '2.1',
+          impact_percentage: 2.1,
           description: 'Current season shows higher demand',
         },
       ],
       marketComparables: [
         {
           address: `${Math.floor(Math.random() * 999)} Nearby St`,
-          distance: (Math.random() * 2).toFixed(1),
+          rent: recommendedRent + Math.floor(Math.random() * 100) - 50,
           bedrooms: 2,
           bathrooms: 1,
-          sqft: 850,
-          rent: recommendedRent + Math.floor(Math.random() * 100) - 50,
-          listingDate: new Date().toISOString(),
-          similarity: 0.85 + Math.random() * 0.1,
+          square_feet: 850,
+          distance_miles: Math.random() * 2,
+          similarity_score: 0.85 + Math.random() * 0.1,
         },
       ],
+      modelVersion: '1.0',
       reasoning: `Based on market analysis, this unit could be adjusted by ${(increase * 100).toFixed(1)}% to align with current market conditions.`,
     };
-  }
-}
+  } }

@@ -23,7 +23,7 @@ import InspectionManagementPage from './InspectionManagementPage';
 import MaintenanceManagementPage from './MaintenanceManagementPage';
 import QuickBooksPage from './QuickBooksPage';
 import { AppShell } from './components/ui/AppShell';
-import { RentOptimizationDashboard } from './domains/property-manager/features/rent-optimization/RentOptimizationDashboard';
+import RentOptimizationDashboard from './domains/property-manager/features/rent-optimization/RentOptimizationDashboard';
 import { PropertySearchPage } from './pages/properties/PropertySearchPage';
 
 // Shared domain imports

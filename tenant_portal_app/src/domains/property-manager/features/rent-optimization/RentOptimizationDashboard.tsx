@@ -3,47 +3,111 @@
  * Property Manager dashboard for AI-generated rent recommendations
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardBody, Spinner, Button } from '@nextui-org/react';
 import { RentRecommendationCard } from './RentRecommendationCard';
-import { rentOptimizationService } from '../../../shared/ai-services/rent-optimization/RentOptimizationService';
 import { RentRecommendation } from '../../../shared/ai-services/types';
+
+const API_ENDPOINT = '/api/rent-recommendations';
 
 export const RentOptimizationDashboard: React.FC = () => {
   const [recommendations, setRecommendations] = useState<RentRecommendation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [generating, setGenerating] = useState(false);
 
-  const getAuthToken = (): string | null => {
-    return localStorage.getItem('token');
-  };
+  const getAuthToken = useCallback(() => localStorage.getItem('token'), []);
 
-  const loadRecommendations = async () => {
+  const normalizeStatus = useCallback((value?: string): RentRecommendation['status'] => {
+    const normalized = (value ?? '').toLowerCase();
+    if (normalized === 'accepted') return 'accepted';
+    if (normalized === 'rejected') return 'rejected';
+    return 'pending';
+  }, []);
+
+  const transformRecommendation = useCallback((item: any): RentRecommendation => ({
+    id: item.id,
+    unitId: String(item.unitId),
+    currentRent: item.currentRent ?? 0,
+    recommendedRent: item.recommendedRent ?? 0,
+    confidenceInterval: {
+      low: item.confidenceIntervalLow ?? 0,
+      high: item.confidenceIntervalHigh ?? 0,
+    },
+    factors: item.factors ?? [],
+    marketComparables: item.marketComparables ?? [],
+    modelVersion: item.modelVersion ?? 'backend',
+    generatedAt: item.generatedAt ?? item.createdAt ?? new Date().toISOString(),
+    status: normalizeStatus(item.status),
+    reasoning: item.reasoning ?? item.note ?? '',
+  }), [normalizeStatus]);
+
+  const loadRecommendations = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
-      // In production, get unit IDs from backend
-      // For now, use mock unit IDs
-      const unitIds = ['1', '2', '3'];
-      
-      const response = await rentOptimizationService.getRecommendations(unitIds);
-
-      if (response.success && response.data) {
-        setRecommendations(response.data);
-      } else {
-        setError(response.error?.message || 'Failed to load recommendations');
+      const token = getAuthToken();
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
       }
+
+      const response = await fetch(API_ENDPOINT, { headers });
+      if (!response.ok) {
+        throw new Error('Failed to load rent recommendations');
+      }
+
+      const data = await response.json();
+      if (!Array.isArray(data)) {
+        throw new Error('Unexpected payload from rent recommendations API');
+      }
+
+      setRecommendations(data.map(transformRecommendation));
     } catch (err: any) {
-      setError(err.message || 'Unexpected error occurred');
+      setError(err.message || 'Unable to load rent recommendations');
     } finally {
       setLoading(false);
     }
-  };
+  }, [getAuthToken, transformRecommendation]);
+
+
+  const handleGenerateRecommendations = useCallback(async () => {
+    setGenerating(true);
+    setError(null);
+
+    try {
+      const token = getAuthToken();
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+
+      const response = await fetch(`${API_ENDPOINT}/bulk-generate/all`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to trigger recommendation generation');
+      }
+
+      await loadRecommendations();
+    } catch (err: any) {
+      setError(err.message || 'Failed to generate recommendations');
+    } finally {
+      setGenerating(false);
+    }
+  }, [loadRecommendations]);
 
   useEffect(() => {
-    loadRecommendations();
-  }, []);
+    handleGenerateRecommendations();
+  }, [getAuthToken]);
+
 
   const handleAccept = async (unitId: string, newRent: number) => {
     try {
@@ -59,11 +123,10 @@ export const RentOptimizationDashboard: React.FC = () => {
         return;
       }
 
-      // Call backend API to accept recommendation
       const response = await fetch(`/api/rent-recommendations/${recommendation.id}/accept`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });
@@ -72,13 +135,12 @@ export const RentOptimizationDashboard: React.FC = () => {
         throw new Error('Failed to accept recommendation');
       }
 
-      // Update local state
       setRecommendations(prev =>
         prev.map(rec =>
           rec.unitId === unitId
             ? { ...rec, status: 'accepted' as const }
-            : rec
-        )
+            : rec,
+        ),
       );
 
       alert(`Rent recommendation accepted for unit ${unitId}!`);
@@ -102,11 +164,10 @@ export const RentOptimizationDashboard: React.FC = () => {
         return;
       }
 
-      // Call backend API to reject recommendation
       const response = await fetch(`/api/rent-recommendations/${recommendation.id}/reject`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });
@@ -115,13 +176,12 @@ export const RentOptimizationDashboard: React.FC = () => {
         throw new Error('Failed to reject recommendation');
       }
 
-      // Update local state
       setRecommendations(prev =>
         prev.map(rec =>
           rec.unitId === unitId
             ? { ...rec, status: 'rejected' as const }
-            : rec
-        )
+            : rec,
+        ),
       );
 
       alert(`Rent recommendation rejected for unit ${unitId}`);
@@ -131,42 +191,9 @@ export const RentOptimizationDashboard: React.FC = () => {
     }
   };
 
-  const handleGenerateRecommendations = async () => {
-    try {
-      const token = getAuthToken();
-      if (!token) {
-        alert('Authentication required');
-        return;
-      }
-
-      setLoading(true);
-      setError(null);
-
-      // Generate recommendations for units 1, 2, 3
-      const response = await fetch('/api/rent-recommendations/generate', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ unitIds: [1, 2, 3] }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to generate recommendations');
-      }
-
-      // Reload recommendations
-      await loadRecommendations();
-      
-      alert('Rent recommendations generated successfully!');
-    } catch (err: any) {
-      console.error('Error generating recommendations:', err);
-      setError(err.message || 'Failed to generate recommendations');
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    loadRecommendations();
+  }, [loadRecommendations]);
 
   if (loading) {
     return (
@@ -199,7 +226,7 @@ export const RentOptimizationDashboard: React.FC = () => {
   return (
     <div className="p-8 space-y-8">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center flex-wrap gap-3">
         <div>
           <h1 className="text-3xl font-bold">Rent Optimization</h1>
           <p className="text-gray-600 mt-1">
@@ -207,10 +234,10 @@ export const RentOptimizationDashboard: React.FC = () => {
           </p>
         </div>
         <div className="flex gap-3">
-          <Button color="success" onPress={handleGenerateRecommendations}>
-            Generate New
+          <Button color="success" onPress={handleGenerateRecommendations} isLoading={generating}>
+            {generating ? 'Generating…' : 'Generate New'}
           </Button>
-          <Button color="primary" variant="flat" onPress={loadRecommendations}>
+          <Button color="primary" variant="flat" onPress={loadRecommendations} isDisabled={loading || generating}>
             Refresh
           </Button>
         </div>

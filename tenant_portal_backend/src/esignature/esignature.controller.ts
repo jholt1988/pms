@@ -15,7 +15,7 @@ interface AuthenticatedRequest extends ExpressRequest {
   };
 }
 
-@Controller('esignature')
+@Controller(['esignature', 'api/esignature'])
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 export class EsignatureController {
   constructor(private readonly esignatureService: EsignatureService) {}

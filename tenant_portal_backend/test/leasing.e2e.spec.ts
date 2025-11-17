@@ -31,6 +31,7 @@ describe('Leasing Agent API (e2e)', () => {
     await prisma.leadMessage.deleteMany();
     await prisma.propertyInquiry.deleteMany();
     await prisma.lead.deleteMany();
+    await prisma.lease.deleteMany();
     await prisma.unit.deleteMany();
     await prisma.property.deleteMany();
     await prisma.user.deleteMany();
@@ -67,6 +68,7 @@ describe('Leasing Agent API (e2e)', () => {
     await prisma.leadMessage.deleteMany();
     await prisma.propertyInquiry.deleteMany();
     await prisma.lead.deleteMany();
+    await prisma.lease.deleteMany();
     await prisma.unit.deleteMany();
     await prisma.property.deleteMany();
     await prisma.user.deleteMany();

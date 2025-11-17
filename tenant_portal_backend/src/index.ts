@@ -28,7 +28,10 @@ async function bootstrap() {
   app.use(require('express').json({ limit: '1mb' }));
   app.use(require('express').urlencoded({ limit: '1mb', extended: true }));
   
-  app.setGlobalPrefix('api');
+  const globalPrefix = 'api';
+  app.setGlobalPrefix(globalPrefix, {
+    exclude: ['leasing', 'esignature', 'api/leasing', 'api/esignature'],
+  });
   
   // Enhanced validation with sanitization
   app.useGlobalPipes(new ValidationPipe({ 

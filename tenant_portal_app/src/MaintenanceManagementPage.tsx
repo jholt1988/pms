@@ -73,7 +73,7 @@ export default function MaintenanceManagementPage(): React.ReactElement {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('/api/maintenance-requests', {
+      const response = await fetch('/maintenance', {
         headers: {
           Authorization: `Bearer ${token}`,
         },

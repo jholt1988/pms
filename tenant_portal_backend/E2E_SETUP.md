@@ -106,7 +106,7 @@ createdb -U postgres tenant_portal_test
 **Solution**: Run migrations:
 ```bash
 # Ensure you're in tenant_portal_backend directory
-$env:DATABASE_URL="postgresql://postgres:jordan@localhost:5432/tenant_portal_test?schema=public_"
+$env:DATABASE_URL="postgresql://postgres:jordan@localhost:5432/tenant_portal_backend?schema=public_"
 npx prisma migrate deploy
 ```
 

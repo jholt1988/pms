@@ -25,6 +25,7 @@ describe('Auth API (e2e)', () => {
     // Clean up users and related data before each test
     await prisma.securityEvent.deleteMany();
     await prisma.passwordResetToken.deleteMany();
+    await prisma.lease.deleteMany();
     await prisma.user.deleteMany();
   });
 
@@ -32,6 +33,7 @@ describe('Auth API (e2e)', () => {
     // Final cleanup
     await prisma.securityEvent.deleteMany();
     await prisma.passwordResetToken.deleteMany();
+    await prisma.lease.deleteMany();
     await prisma.user.deleteMany();
     await app.close();
   });

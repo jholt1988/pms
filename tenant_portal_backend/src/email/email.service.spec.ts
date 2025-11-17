@@ -10,11 +10,12 @@ describe('EmailService', () => {
   const mockConfigService = {
     get: jest.fn((key: string, defaultValue?: any) => {
       const config: Record<string, any> = {
-        SMTP_HOST: 'smtp.test.com',
+        SMTP_HOST: 'smtp.gmail.com',
         SMTP_PORT: '587',
-        SMTP_USER: 'test@test.com',
-        SMTP_PASS: 'test-password',
-        SMTP_FROM: 'noreply@test.com',
+
+        SMTP_USER: 'jordanh316@gmail.com',
+        SMTP_PASS: 'Bentley07Sheridan',
+        SMTP_FROM: 'jordanh316@gmail.com',
         APP_URL: 'http://localhost:3000',
       };
       return config[key] || defaultValue;

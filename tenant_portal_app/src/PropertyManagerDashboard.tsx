@@ -58,38 +58,6 @@ interface DashboardMetrics {
   }>;
 }
 
-const mockMetrics: DashboardMetrics = {
-  occupancy: {
-    total: 50,
-    occupied: 47,
-    vacant: 3,
-    percentage: 94
-  },
-  financials: {
-    monthlyRevenue: 75000,
-    collectedThisMonth: 68000,
-    outstanding: 7000
-  },
-  maintenance: {
-    total: 15,
-    pending: 5,
-    inProgress: 8,
-    overdue: 2
-  },
-  applications: {
-    total: 12,
-    pending: 7,
-    approved: 4,
-    rejected: 1
-  },
-  recentActivity: [
-    { id: 1, type: 'maintenance', title: 'Emergency HVAC repair - Unit 12B', date: '2025-11-06', priority: 'high' },
-    { id: 2, type: 'application', title: 'New rental application - Sarah Johnson', date: '2025-11-06', priority: 'medium' },
-    { id: 3, type: 'payment', title: 'Late payment alert - Unit 5A', date: '2025-11-05', priority: 'high' },
-    { id: 4, type: 'lease', title: 'Lease renewal due - Unit 8C', date: '2025-11-05', priority: 'medium' },
-  ]
-};
-
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
@@ -134,14 +102,16 @@ export const PropertyManagerDashboard: React.FC = () => {
   }, [token]);
 
   if (loading) {
-    return <p>Loading...</p>;
+    return <p>Loading dashboard...</p>;
   }
 
   if (!metrics) {
     return <p>Could not load dashboard metrics.</p>;
   }
 
-  const collectionRate = Math.round((metrics.financials.collectedThisMonth / metrics.financials.monthlyRevenue) * 100);
+  const collectionRate = metrics.financials?.monthlyRevenue
+    ? Math.round((metrics.financials?.collectedThisMonth / metrics.financials?.monthlyRevenue) * 100)
+    : 0;
 
   return (
     <div className="space-y-6 p-6">
@@ -156,7 +126,21 @@ export const PropertyManagerDashboard: React.FC = () => {
         <Link to="/properties">
           <Card className="border-l-4 border-l-success">
             <CardBody className="p-4">
-              {/* ... (Occupancy Rate card content) */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs uppercase tracking-wider text-foreground-500">Occupancy Rate</p>
+                  <p className="text-2xl font-semibold text-foreground">{metrics.occupancy?.percentage}%</p>
+                </div>
+                <Chip color="success" variant="flat">Live</Chip>
+              </div>
+              <p className="text-sm text-foreground-500 mt-3">
+                {metrics.occupancy?.occupied} of {metrics.occupancy?.total} units occupied ({metrics.occupancy?.vacant} vacant)
+              </p>
+              <Progress
+                value={metrics.occupancy?.percentage}
+                size="sm"
+                className="mt-4"
+              />
             </CardBody>
           </Card>
         </Link>
@@ -165,7 +149,22 @@ export const PropertyManagerDashboard: React.FC = () => {
         <Link to="/reporting">
           <Card className="border-l-4 border-l-primary">
             <CardBody className="p-4">
-              {/* ... (Monthly Revenue card content) */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs uppercase tracking-wider text-foreground-500">Monthly Revenue</p>
+                  <p className="text-2xl font-semibold text-foreground">{formatCurrency(metrics.financials.monthlyRevenue)}</p>
+                </div>
+                <Chip color="primary" variant="flat">{collectionRate}% collected</Chip>
+              </div>
+              <div className="mt-3">
+                <p className="text-sm text-foreground-500">Collected: {formatCurrency(metrics.financials.collectedThisMonth)}</p>
+                <p className="text-sm text-foreground-500">Outstanding: {formatCurrency(metrics.financials.outstanding)}</p>
+              </div>
+              <Progress
+                value={Math.min(collectionRate, 100)}
+                size="sm"
+                className="mt-4"
+              />
             </CardBody>
           </Card>
         </Link>
@@ -174,7 +173,27 @@ export const PropertyManagerDashboard: React.FC = () => {
         <Link to="/maintenance-management">
           <Card className="border-l-4 border-l-warning">
             <CardBody className="p-4">
-              {/* ... (Maintenance Requests card content) */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs uppercase tracking-wider text-foreground-500">Maintenance Requests</p>
+                  <p className="text-2xl font-semibold text-foreground">{metrics.maintenance?.total}</p>
+                </div>
+                <Chip color="warning" variant="flat">{metrics.maintenance?.overdue} overdue</Chip>
+              </div>
+              <div className="mt-3 grid grid-cols-3 gap-3 text-xs">
+                <div className="text-center">
+                  <p className="text-foreground-500">Pending</p>
+                  <p className="font-semibold text-foreground">{metrics.maintenance?.pending}</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-foreground-500">In progress</p>
+                  <p className="font-semibold text-foreground">{metrics.maintenance?.inProgress}</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-foreground-500">Overdue</p>
+                  <p className="font-semibold text-foreground">{metrics.maintenance?.overdue}</p>
+                </div>
+              </div>
             </CardBody>
           </Card>
         </Link>
@@ -183,13 +202,57 @@ export const PropertyManagerDashboard: React.FC = () => {
         <Link to="/rental-applications-management">
           <Card className="border-l-4 border-l-secondary">
             <CardBody className="p-4">
-              {/* ... (Applications card content) */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs uppercase tracking-wider text-foreground-500">Rental Applications</p>
+                  <p className="text-2xl font-semibold text-foreground">{metrics.applications.total}</p>
+                </div>
+                <Chip color="secondary" variant="flat">{metrics.applications.pending} pending</Chip>
+              </div>
+              <div className="mt-3 grid grid-cols-3 gap-3 text-xs">
+                <div className="text-center">
+                  <p className="text-foreground-500">Approved</p>
+                  <p className="font-semibold text-foreground">{metrics.applications.approved}</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-foreground-500">Rejected</p>
+                  <p className="font-semibold text-foreground">{metrics.applications.rejected}</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-foreground-500">Pending</p>
+                  <p className="font-semibold text-foreground">{metrics.applications.pending}</p>
+                </div>
+              </div>
             </CardBody>
           </Card>
         </Link>
       </div>
 
       {/* ... (rest of the dashboard) */}
+      <Card>
+        <CardHeader>
+          <div>
+            <p className="text-xs uppercase tracking-wider text-foreground-500">Recent Activity</p>
+            <p className="text-lg font-semibold text-foreground">Latest updates from operations</p>
+          </div>
+          <Button size="sm" variant="flat">
+            View all
+          </Button>
+        </CardHeader>
+        <CardBody className="space-y-4">
+          {metrics.recentActivity.map((activity) => (
+            <div key={activity.id} className="flex items-center justify-between">
+              <div>
+                <p className="font-semibold text-foreground">{activity.title}</p>
+                <p className="text-xs text-foreground-500">{formatDate(activity.date)}</p>
+              </div>
+              <Chip color={activity.priority === 'high' ? 'danger' : activity.priority === 'medium' ? 'warning' : 'default'} variant="flat">
+                {activity.type}
+              </Chip>
+            </div>
+          ))}
+        </CardBody>
+      </Card>
     </div>
   );
 };

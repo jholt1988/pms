@@ -1,5 +1,5 @@
 
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
@@ -31,6 +31,9 @@ import { JobsModule } from './jobs/jobs.module';
 import { QuickBooksModule } from './quickbooks/quickbooks.module';
 import { ListingSyndicationModule } from './listing-syndication/listing-syndication.module';
 import { EsignatureModule } from './esignature/esignature.module';
+import { DashboardModule } from './dashboard/dashboard.module';
+import { RentOptimizationModule } from './rent-optimization/rent-optimization.module';
+import { LegacyPathMiddleware } from './middleware/legacy-path.middleware';
 
 @Module({
   imports: [
@@ -79,6 +82,8 @@ import { EsignatureModule } from './esignature/esignature.module';
     QuickBooksModule,
     ListingSyndicationModule,
     EsignatureModule,
+    DashboardModule,
+    RentOptimizationModule,
   ],
   controllers: [AppController],
   providers: [
@@ -90,4 +95,8 @@ import { EsignatureModule } from './esignature/esignature.module';
     },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(LegacyPathMiddleware).forRoutes('*');
+  }
+}

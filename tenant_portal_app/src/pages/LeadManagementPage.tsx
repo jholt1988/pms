@@ -62,7 +62,7 @@ export const LeadManagementPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [showConversation, setShowConversation] = useState(false);
 
-  const API_BASE_URL = 'http://localhost:3001/api';
+  const API_BASE_URL = '/api/leasing';
 
   // Fetch leads and stats on mount
   useEffect(() => {
@@ -94,7 +94,7 @@ export const LeadManagementPage: React.FC = () => {
 
   const fetchStats = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/leads/stats/dashboard`);
+      const response = await fetch(`${API_BASE_URL}/statistics`);
       if (response.ok) {
         const data = await response.json();
         setStats(data);
@@ -132,7 +132,7 @@ export const LeadManagementPage: React.FC = () => {
   const updateLeadStatus = async (leadId: string, newStatus: string) => {
     try {
       const response = await fetch(`${API_BASE_URL}/leads/${leadId}/status`, {
-        method: 'POST',
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),
       });

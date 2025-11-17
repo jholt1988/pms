@@ -8,7 +8,7 @@ import { SecurityEventsService } from '../security-events/security-events.servic
 import { ConfigService } from '@nestjs/config';
 import { LoginRequestDto } from './dto/login-request.dto';
 import { RegisterRequestDto } from './dto/register-request.dto';
-import { SecurityEventType } from '@prisma/client';
+import { Prisma, SecurityEventType } from '@prisma/client';
 import { authenticator } from 'otplib';
 import { addHours, addMinutes } from 'date-fns';
 import { PrismaService } from '../prisma/prisma.service';
@@ -25,6 +25,8 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly emailService: EmailService,
   ) {}
+
+  private readonly logger = new Logger(AuthService.name);
 
   private get maxFailedAttempts(): number {
     return Number(this.configService.get<number>('AUTH_MAX_FAILED_ATTEMPTS') ?? 5);
@@ -65,7 +67,7 @@ export class AuthService {
       throw new UnauthorizedException('Account is locked. Please try again later.');
     }
 
-    const isMatch = await bcrypt.compare(dto.password, user.password);
+const isMatch = await bcrypt.compare(dto.password, user.password);
     if (!isMatch) {
       const failedAttempts = (user.failedLoginAttempts ?? 0) + 1;
       const update: any = { failedLoginAttempts: failedAttempts };
@@ -77,7 +79,7 @@ export class AuthService {
         update.failedLoginAttempts = 0;
       }
 
-      await this.usersService.update(user.id, update);
+      await this.safeUpdateUser(user.id, update);
 
       await this.securityEvents.logEvent({
         type: lockoutUntil ? SecurityEventType.LOGIN_LOCKED : SecurityEventType.LOGIN_FAILURE,
@@ -122,7 +124,7 @@ export class AuthService {
       }
     }
 
-    await this.usersService.update(user.id, {
+    await this.safeUpdateUser(user.id, {
       failedLoginAttempts: 0,
       lockoutUntil: null,
       lastLoginAt: now,
@@ -141,6 +143,21 @@ export class AuthService {
     return { access_token: this.jwtService.sign(payload) };
   }
 
+  private async safeUpdateUser(userId: number, data: Prisma.UserUpdateInput) {
+    try {
+      await this.usersService.update(userId, data);
+    } catch (error: unknown) {
+      const prismaError = error as { code?: string };
+      if (prismaError?.code === 'P2025') {
+        this.logger.warn(
+          `User ${userId} disappeared before user metadata update`,
+        );
+        return;
+      }
+      throw error;
+    }
+  }
+
   async register(dto: RegisterRequestDto): Promise<{ id: number; username: string; role: string }> {
     const policyErrors = this.passwordPolicy.validate(dto.password);
     if (policyErrors.length) {
@@ -154,12 +171,21 @@ export class AuthService {
     }
     
     // Password hashing is now handled by UsersService
-    const user = await this.usersService.create({
-      username: dto.username,
-      password: dto.password,
-      passwordUpdatedAt: new Date(),
-      role: 'TENANT', // Force TENANT role for all public registrations
-    });
+    let user;
+    try {
+      user = await this.usersService.create({
+        username: dto.username,
+        password: dto.password,
+        passwordUpdatedAt: new Date(),
+        role: 'TENANT', // Force TENANT role for all public registrations
+      });
+    } catch (error: unknown) {
+      const prismaError = error as { code?: string };
+      if (prismaError?.code === 'P2002') {
+        throw new BadRequestException('Username already exists');
+      }
+      throw error;
+    }
 
     await this.securityEvents.logEvent({
       type: SecurityEventType.PASSWORD_CHANGED,
@@ -371,5 +397,4 @@ export class AuthService {
     });
   }
 
-  private readonly logger = new Logger(AuthService.name);
 }

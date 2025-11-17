@@ -4,6 +4,7 @@
  */
 
 import { Injectable } from '@nestjs/common';
+import { LeadApplicationStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
 
@@ -18,9 +19,11 @@ export class LeadApplicationsService {
    * Submit a rental application
    */
   async submitApplication(data: any) {
+    const normalizedStatus = this.normalizeLeadApplicationStatus(data?.status);
     const application = await this.prisma.leadApplication.create({
       data: {
         ...data,
+        status: normalizedStatus,
         submittedAt: new Date(),
       },
       include: {
@@ -89,9 +92,9 @@ export class LeadApplicationsService {
       where.propertyId = filters.propertyId;
     }
 
-    if (filters?.status) {
-      where.status = filters.status;
-    }
+      if (filters?.status) {
+        where.status = this.normalizeLeadApplicationStatus(filters.status);
+      }
 
     if (filters?.dateFrom || filters?.dateTo) {
       where.submittedAt = {};
@@ -127,13 +130,20 @@ export class LeadApplicationsService {
     reviewedById?: number,
     reviewNotes?: string,
   ) {
-    const updates: any = { status };
+    const normalizedStatus = this.normalizeLeadApplicationStatus(status);
+    const updates: any = { status: normalizedStatus };
 
-    if (status === 'APPROVED') {
+    if (
+      normalizedStatus === LeadApplicationStatus.APPROVED ||
+      normalizedStatus === LeadApplicationStatus.CONDITIONALLY_APPROVED
+    ) {
       updates.approvedAt = new Date();
     }
 
-    if (status === 'DENIED') {
+    if (
+      normalizedStatus === LeadApplicationStatus.DENIED ||
+      normalizedStatus === LeadApplicationStatus.REJECTED
+    ) {
       updates.rejectedAt = new Date();
     }
 
@@ -156,12 +166,18 @@ export class LeadApplicationsService {
     });
 
     // Send status update email for major status changes
-    if (application.lead.email && ['APPROVED', 'CONDITIONALLY_APPROVED', 'DENIED'].includes(status)) {
+    const notifyStatuses = [
+      LeadApplicationStatus.APPROVED,
+      LeadApplicationStatus.CONDITIONALLY_APPROVED,
+      LeadApplicationStatus.DENIED,
+    ];
+
+    if (application.lead.email && notifyStatuses.includes(normalizedStatus)) {
       await this.emailService.sendApplicationStatusEmail(
         application,
         application.lead,
         application.property,
-        status as 'APPROVED' | 'CONDITIONALLY_APPROVED' | 'DENIED',
+        normalizedStatus as 'APPROVED' | 'CONDITIONALLY_APPROVED' | 'DENIED',
       ).catch(err => console.error('Failed to send application status email:', err));
     }
 
@@ -201,5 +217,20 @@ export class LeadApplicationsService {
         feePaidAt: new Date(),
       },
     });
+  }
+
+  private normalizeLeadApplicationStatus(status?: string): LeadApplicationStatus {
+    if (!status) {
+      return LeadApplicationStatus.SUBMITTED;
+    }
+
+    const normalized = status.trim().toUpperCase();
+    const allowed = Object.values(LeadApplicationStatus) as string[];
+
+    if (allowed.includes(normalized)) {
+      return normalized as LeadApplicationStatus;
+    }
+
+    return LeadApplicationStatus.SUBMITTED;
   }
 }

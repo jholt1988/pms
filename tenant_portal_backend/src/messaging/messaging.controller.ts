@@ -33,7 +33,7 @@ interface AuthenticatedRequest extends Request {
   };
 }
 
-@Controller('api/messaging')
+@Controller('messaging')
 @UseGuards(AuthGuard('jwt'))
 export class MessagingController {
   constructor(
@@ -65,6 +65,14 @@ export class MessagingController {
     @Request() req: AuthenticatedRequest,
   ) {
     return this.messagingService.createConversation(dto, req.user.userId);
+  }
+
+  @Get('conversations/:id')
+  async getConversation(
+    @Param('id', ParseIntPipe) conversationId: number,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    return this.messagingService.getConversationById(conversationId, req.user.userId);
   }
 
   /**

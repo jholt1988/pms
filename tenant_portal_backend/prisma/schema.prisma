@@ -56,16 +56,20 @@ model User {
   generatedEstimates        RepairEstimate[]            @relation("GeneratedEstimates")
   approvedEstimates         RepairEstimate[]            @relation("ApprovedEstimates")
   scheduleEvents            ScheduleEvent[]             @relation("ScheduleEventTenant")
+  toursConducted            Tour[]                      @relation("TourConductedBy")
+  leadApplicationReviews    LeadApplication[]           @relation("LeadApplicationReviewers")
 
   // Stripe integration
   stripeCustomerId String? @unique
 
   // QuickBooks integration
-  messageTemplates      MessageTemplate[]
-  bulkMessageBatches    BulkMessageBatch[]
-  bulkMessageRecipients BulkMessageRecipient[]
-  quickBooksConnections QuickBooksConnection[] @relation("UserQuickBooksConnections")
-  savedPropertyFilters      SavedPropertyFilter[]
+  messageTemplates        MessageTemplate[]
+  bulkMessageBatches      BulkMessageBatch[]
+  bulkMessageRecipients   BulkMessageRecipient[]
+  quickBooksConnections   QuickBooksConnection[] @relation("UserQuickBooksConnections")
+  savedPropertyFilters    SavedPropertyFilter[]
+  acceptedRecommendations RentRecommendation[]   @relation("AcceptedRentRecommendations")
+  rejectedRecommendations RentRecommendation[]   @relation("RejectedRentRecommendations")
 }
 
 model Property {
@@ -75,7 +79,7 @@ model Property {
   city                 String?
   state                String?
   zipCode              String?
-  country              String?                 @default("USA")
+  country              String?                   @default("USA")
   latitude             Float?
   longitude            Float?
   propertyType         String?
@@ -84,10 +88,10 @@ model Property {
   bathrooms            Float?
   minRent              Float?
   maxRent              Float?
-  tags                 String[]                @default([])
+  tags                 String[]                  @default([])
   yearBuilt            Int?
-  createdAt            DateTime                @default(now())
-  updatedAt            DateTime                @updatedAt
+  createdAt            DateTime                  @default(now())
+  updatedAt            DateTime                  @updatedAt
   units                Unit[]
   rentalApplications   RentalApplication[]
   expenses             Expense[]
@@ -98,6 +102,9 @@ model Property {
   UnitInspection       UnitInspection[]
   repairEstimates      RepairEstimate[]
   scheduleEvents       ScheduleEvent[]
+  propertyInquiries    PropertyInquiry[]
+  tours                Tour[]
+  leadApplications     LeadApplication[]
   marketingProfile     PropertyMarketingProfile?
   photos               PropertyPhoto[]
   amenities            PropertyAmenity[]
@@ -165,16 +172,16 @@ model PropertyAmenity {
 }
 
 model SavedPropertyFilter {
-  id        Int      @id @default(autoincrement())
-  name      String
+  id          Int      @id @default(autoincrement())
+  name        String
   description String?
-  filters   Json
-  sortBy    String?
-  sortOrder String?
-  user      User     @relation(fields: [userId], references: [id])
-  userId    Int
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  filters     Json
+  sortBy      String?
+  sortOrder   String?
+  user        User     @relation(fields: [userId], references: [id])
+  userId      Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@index([userId])
 }
@@ -186,12 +193,27 @@ model Unit {
   propertyId         Int
   lease              Lease?
   rentalApplications RentalApplication[]
+  leadApplications   LeadApplication[]
+  propertyInquiries  PropertyInquiry[]
   expenses           Expense[]
   MaintenanceRequest MaintenanceRequest[]
   MaintenanceAsset   MaintenanceAsset[]
   inspections        UnitInspection[]
   repairEstimates    RepairEstimate[]
   scheduleEvents     ScheduleEvent[]
+  tours              Tour[]
+
+  unitNumber          String?
+  bedrooms            Float?
+  bathrooms           Float?
+  squareFeet          Int?
+  hasParking          Boolean              @default(false)
+  hasLaundry          Boolean              @default(false)
+  hasBalcony          Boolean              @default(false)
+  hasAC               Boolean              @default(false)
+  isFurnished         Boolean              @default(false)
+  petsAllowed         Boolean              @default(false)
+  rentRecommendations RentRecommendation[]
 }
 
 enum PropertyAvailabilityStatus {
@@ -213,6 +235,12 @@ enum SyndicationStatus {
   SUCCESS
   FAILED
   PAUSED
+}
+
+enum RentRecommendationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
 }
 
 model SyndicationCredential {
@@ -241,6 +269,35 @@ model SyndicationQueue {
   @@index([propertyId])
   @@index([channel])
   @@index([status])
+}
+
+model RentRecommendation {
+  id                     String                   @id
+  unit                   Unit                     @relation(fields: [unitId], references: [id])
+  unitId                 Int
+  currentRent            Float
+  recommendedRent        Float
+  confidenceIntervalLow  Float
+  confidenceIntervalHigh Float
+  factors                Json
+  marketComparables      Json
+  modelVersion           String?
+  reasoning              String?
+  status                 RentRecommendationStatus @default(PENDING)
+  generatedAt            DateTime                 @default(now())
+  acceptedAt             DateTime?
+  acceptedBy             User?                    @relation("AcceptedRentRecommendations", fields: [acceptedById], references: [id])
+  acceptedById           Int?
+  rejectedAt             DateTime?
+  rejectedBy             User?                    @relation("RejectedRentRecommendations", fields: [rejectedById], references: [id])
+  rejectedById           Int?
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+
+  @@index([unitId])
+  @@index([status])
+  @@index([acceptedById])
+  @@index([rejectedById])
 }
 
 model SyndicationErrorLog {
@@ -297,6 +354,8 @@ model Lease {
   maintenanceRequests       MaintenanceRequest[]
   inspections               UnitInspection[]
   esignEnvelopes            EsignEnvelope[]
+  createdAt                 DateTime                  @default(now())
+  updatedAt                 DateTime                  @updatedAt
 
   @@index([status])
   @@index([endDate])
@@ -780,6 +839,149 @@ model RentalApplication {
   manualNotes           RentalApplicationNote[]
   createdAt             DateTime                @default(now())
   updatedAt             DateTime                @updatedAt
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  TOURING
+  APPLICATION_SUBMITTED
+  CONVERTED
+  LOST
+}
+
+enum InterestLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
+enum TourStatus {
+  SCHEDULED
+  RESCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
+model Lead {
+  id                     String            @id @default(cuid())
+  sessionId              String            @unique
+  name                   String?
+  email                  String?
+  phone                  String?
+  status                 LeadStatus        @default(NEW)
+  preferredContactMethod String?
+  bedrooms               Int?
+  budget                 Float?
+  moveInDate             String?
+  source                 String?
+  notes                  String?
+  convertedAt            DateTime?
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
+  messages               LeadMessage[]
+  propertyInquiries      PropertyInquiry[]
+  tours                  Tour[]
+  applications           LeadApplication[]
+}
+
+model LeadMessage {
+  id        Int         @id @default(autoincrement())
+  lead      Lead        @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  leadId    String
+  role      MessageRole @default(USER)
+  content   String
+  metadata  Json?
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@index([leadId])
+}
+
+model PropertyInquiry {
+  id         Int           @id @default(autoincrement())
+  lead       Lead          @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  leadId     String
+  property   Property      @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  propertyId Int
+  unit       Unit?         @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  unitId     Int?
+  interest   InterestLevel @default(MEDIUM)
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  @@index([leadId])
+  @@index([propertyId])
+}
+
+model Tour {
+  id            String     @id @default(cuid())
+  lead          Lead       @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  leadId        String
+  property      Property   @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  propertyId    Int
+  unit          Unit?      @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  unitId        Int?
+  scheduledDate DateTime
+  scheduledTime String
+  notes         String?
+  status        TourStatus @default(SCHEDULED)
+  conductedBy   User?      @relation("TourConductedBy", fields: [conductedById], references: [id])
+  conductedById Int?
+  feedback      String?
+  completedAt   DateTime?
+  cancelledAt   DateTime?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  @@index([leadId])
+  @@index([propertyId])
+  @@index([unitId])
+}
+
+enum LeadApplicationStatus {
+  SUBMITTED
+  PENDING
+  APPROVED
+  CONDITIONALLY_APPROVED
+  DENIED
+  REJECTED
+}
+
+model LeadApplication {
+  id                    String                @id @default(cuid())
+  leadId                String
+  lead                  Lead                  @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  propertyId            Int
+  property              Property              @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  unitId                Int?
+  unit                  Unit?                 @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  status                LeadApplicationStatus @default(SUBMITTED)
+  submittedAt           DateTime              @default(now())
+  creditScore           Int?
+  backgroundCheckStatus String?
+  creditCheckStatus     String?
+  reviewedById          Int?
+  reviewedBy            User?                 @relation("LeadApplicationReviewers", fields: [reviewedById], references: [id])
+  reviewedAt            DateTime?
+  reviewNotes           String?
+  approvedAt            DateTime?
+  rejectedAt            DateTime?
+  applicationFee        Float?
+  feePaid               Boolean               @default(false)
+  feePaidAt             DateTime?
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+
+  @@index([leadId])
+  @@index([propertyId])
 }
 
 model Expense {

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Prisma, SecurityEventType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -25,19 +25,31 @@ interface ListEventsParams {
 @Injectable()
 export class SecurityEventsService {
   constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(SecurityEventsService.name);
 
   async logEvent(params: LogEventParams) {
-    return this.prisma.securityEvent.create({
-      data: {
-        type: params.type,
-        success: params.success,
-        ipAddress: params.ipAddress ?? null,
-        userAgent: params.userAgent ?? null,
-        metadata: params.metadata ?? undefined,
-        user: params.userId ? { connect: { id: params.userId } } : undefined,
-        username: params.username ?? null,
-      },
-    });
+    try {
+      await this.prisma.securityEvent.create({
+        data: {
+          type: params.type,
+          success: params.success,
+          ipAddress: params.ipAddress ?? null,
+          userAgent: params.userAgent ?? null,
+          metadata: params.metadata ?? undefined,
+          user: params.userId ? { connect: { id: params.userId } } : undefined,
+          username: params.username ?? null,
+        },
+      });
+    } catch (error: unknown) {
+      const prismaError = error as { code?: string };
+      if (prismaError?.code === 'P2025' || prismaError?.code === 'P2003') {
+        this.logger.warn(
+          `Security event could not relate to user ${params.userId ?? 'unknown'}`,
+        );
+        return;
+      }
+      throw error;
+    }
   }
 
   async listEvents(params: ListEventsParams = {}) {

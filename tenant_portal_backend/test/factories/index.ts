@@ -79,14 +79,20 @@ export class TestDataFactory {
     const unitNum = String(100 + testData.getUniqueId());
     return {
       name: `Unit ${unitNum}`,
-      propertyId,
-      unitNumber: unitNum,
-      bedrooms: 1 + (testData.getUniqueId() % 3),
-      bathrooms: 1 + ((testData.getUniqueId() % 3) * 0.5),
-      squareFeet: 600 + (testData.getUniqueId() % 900),
-      ...overrides,
-    };
-  }
+    propertyId,
+    unitNumber: unitNum,
+    bedrooms: 1 + (testData.getUniqueId() % 3),
+    bathrooms: 1 + ((testData.getUniqueId() % 3) * 0.5),
+    squareFeet: 600 + (testData.getUniqueId() % 900),
+    hasParking: testData.boolean(),
+    hasLaundry: testData.boolean(),
+    hasBalcony: testData.boolean(),
+    hasAC: testData.boolean(),
+    isFurnished: testData.boolean(),
+    petsAllowed: testData.boolean(),
+    ...overrides,
+  };
+}
 
   /**
    * Create a test lease
